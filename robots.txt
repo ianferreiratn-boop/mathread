@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ianferreiratn-boop.github.io/mathread/sitemap.xml
