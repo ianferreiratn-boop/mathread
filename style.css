@@ -3,3 +3,15 @@
 .seoContent{max-width:1000px;margin:28px auto;padding:28px 20px;border-top:1px solid rgba(127,127,127,.2)}.seoContent h2{font-size:clamp(1.35rem,3vw,2rem);margin-bottom:10px}.seoGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:20px 0}.seoGrid article{padding:16px;border:1px solid rgba(127,127,127,.2);border-radius:14px}.seoGrid h3{margin-top:0}.seoKeywords{font-size:.9rem;opacity:.82}.seoLinks a{margin:0 5px}
 
 .close{z-index:5;cursor:pointer;touch-action:manipulation}.toolbar button{cursor:pointer;touch-action:manipulation}.text-layer .punct{user-select:text;-webkit-user-select:text}
+
+/* V8 — seleção nativa e controles robustos no iPad */
+.readerHint{max-width:900px;margin:10px auto 0;padding:10px 14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:12px;font-size:13px;line-height:1.4}
+.toolbar button,.close,.selectionActions button,.iconBtn,.upload{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.toolbar button{min-width:42px;min-height:40px;cursor:pointer}
+.close{z-index:60;min-width:42px;min-height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation}
+.text-layer{user-select:text!important;-webkit-user-select:text!important;touch-action:auto!important;-webkit-touch-callout:default}
+.text-item,.token,.punct{user-select:text!important;-webkit-user-select:text!important}
+.token{touch-action:auto!important}
+.selectionBar{user-select:none;-webkit-user-select:none}
+.selectionBar button{touch-action:manipulation;cursor:pointer;min-height:42px}
+@media(max-width:700px){.readerHint{margin:8px 10px;font-size:12px}.toolbar{padding-left:8px;padding-right:8px}.navgroup button{min-width:42px;min-height:42px}.navgroup span{min-width:55px}.drawer .close{top:7px;right:7px}}

@@ -4,7 +4,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/p
 const $=id=>document.getElementById(id);
 const canvas=$("canvas"),ctx=canvas.getContext("2d"),layer=$("textLayer"),wrap=$("pageWrap");
 let pdf=null,page=1,scale=1.25,readingMode=true,currentTextItems=[],currentToken=null,currentFileName="";
-let touchInfo=null,lastTouchAt=0;
+let pointerInfo=null,lastPointerAt=0,rendering=false;
 let vocab=JSON.parse(localStorage.getItem("mathread_vocab_v5")||localStorage.getItem("mathread_vocab_v4")||localStorage.getItem("mathread_vocab_v3")||"[]");
 
 // Glossário inicial amplo de inglês matemático. Expressões mais longas são consultadas antes de palavras isoladas.
@@ -259,10 +259,11 @@ function local(text){const t=normalize(text);if(D[t])return {translation:D[t],ma
 let currentSelectionText="", currentSelectionRange=null, currentSelectionContext="";
 let history=JSON.parse(localStorage.getItem("mathread_history_v5")||"[]");
 
-$("pdfInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;page=1;currentFileName=f.name;$("welcome").classList.add("hidden");$("reader").classList.remove("hidden");["prev","next","minus","plus"].forEach(x=>$(x).disabled=false);await render();toast("PDF aberto. Toque em uma palavra ou selecione uma frase.")}catch(err){console.error(err);toast("Não foi possível abrir este PDF.")}};
+$("pdfInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;page=1;currentFileName=f.name;$("welcome").classList.add("hidden");$("reader").classList.remove("hidden");["prev","next","minus","plus"].forEach(x=>$(x).disabled=false);await render();$("readerHint")?.classList.remove("hidden");toast("PDF aberto. Toque em uma palavra ou pressione e arraste para selecionar.")}catch(err){console.error(err);toast("Não foi possível abrir este PDF.")}};
 
 async function render(){
-  if(!pdf)return;
+  if(!pdf || rendering)return;
+  rendering=true;
   const p=await pdf.getPage(page),vp=p.getViewport({scale});
   canvas.width=vp.width;canvas.height=vp.height;wrap.style.width=vp.width+"px";wrap.style.height=vp.height+"px";
   await p.render({canvasContext:ctx,viewport:vp}).promise;
@@ -276,72 +277,103 @@ async function render(){
   clearSelectionUI();
   if(document.activeElement?.blur) document.activeElement.blur();
   window.getSelection()?.removeAllRanges();
+  rendering=false;
 }
 
-async function renderText(p,vp){layer.innerHTML="";currentTextItems=[];const tc=await p.getTextContent();
- for(const item of tc.items){if(!item.str?.trim())continue;const tx=pdfjsLib.Util.transform(vp.transform,item.transform);const fontSize=Math.max(6,Math.hypot(tx[2],tx[3]));const box=document.createElement("span");box.className="text-item";box.style.left=tx[4]+"px";box.style.top=(tx[5]-fontSize)+"px";box.style.fontSize=fontSize+"px";box.style.fontFamily=item.fontName||"sans-serif";box.style.width=Math.max(item.width*vp.scale,1)+"px";box.style.height=Math.max(fontSize*1.35,8)+"px";
-   const parts=item.str.split(/(\s+|[.,;:!?()\[\]{}])/);
-   for(const part of parts){
-     if(!part)continue;
-     const s=document.createElement("span");
-     s.textContent=part;
-     if(/\s+/.test(part)||/^[.,;:!?()\[\]{}]$/.test(part)){
-       s.className="punct";
-     }else{
-       s.className="token";
-       s.dataset.word=part;
-       s.addEventListener("click",ev=>{
-         if(Date.now()-lastTouchAt<700)return;
-         if(window.getSelection()?.toString().trim())return;
-         ev.preventDefault();ev.stopPropagation();handleToken(s,part,box);
-       });
-       s.addEventListener("touchstart",ev=>{
-         const t=ev.touches[0];
-         touchInfo={x:t.clientX,y:t.clientY,time:Date.now(),moved:false,el:s,word:part,box};
-       },{passive:true});
-       s.addEventListener("touchmove",ev=>{
-         if(!touchInfo)return;
-         const t=ev.touches[0];
-         if(Math.hypot(t.clientX-touchInfo.x,t.clientY-touchInfo.y)>10)touchInfo.moved=true;
-       },{passive:true});
-       s.addEventListener("touchend",ev=>{
-         if(!touchInfo)return;
-         const info=touchInfo;touchInfo=null;lastTouchAt=Date.now();
-         const elapsed=Date.now()-info.time;
-         const selection=window.getSelection();
-         // Toque curto = palavra. Pressionar/arrastar = seleção nativa do iPad/iPhone.
-         if(elapsed<420&&!info.moved&&!selection?.toString().trim()){
-           ev.preventDefault();ev.stopPropagation();handleToken(info.el,info.word,info.box);
-         }
-       },{passive:false});
-     }
-     box.appendChild(s)
-   }
-   layer.appendChild(box);currentTextItems.push({str:item.str,box})
- }
+async function renderText(p,vp){
+  layer.innerHTML="";
+  currentTextItems=[];
+  const tc=await p.getTextContent();
+  for(const item of tc.items){
+    if(!item.str?.trim()) continue;
+    const tx=pdfjsLib.Util.transform(vp.transform,item.transform);
+    const fontSize=Math.max(6,Math.hypot(tx[2],tx[3]));
+    const box=document.createElement("span");
+    box.className="text-item";
+    box.style.left=tx[4]+"px";
+    box.style.top=(tx[5]-fontSize)+"px";
+    box.style.fontSize=fontSize+"px";
+    box.style.fontFamily=item.fontName||"sans-serif";
+    box.style.width=Math.max(item.width*vp.scale,1)+"px";
+    box.style.height=Math.max(fontSize*1.35,8)+"px";
+
+    // Mantemos o texto real no DOM para que a seleção nativa do iPad funcione.
+    // O texto fica invisível visualmente porque o PDF está desenhado no canvas.
+    const parts=item.str.split(/(\s+|[.,;:!?()\[\]{}])/);
+    for(const part of parts){
+      if(!part) continue;
+      const s=document.createElement("span");
+      s.textContent=part;
+      if(/\s+/.test(part)||/^[.,;:!?()\[\]{}]$/.test(part)){
+        s.className="punct";
+      }else{
+        s.className="token";
+        s.dataset.word=part;
+        s.addEventListener("click",ev=>{
+          // Nunca interromper a seleção nativa. Um clique simples sem seleção traduz a palavra.
+          const selection=window.getSelection();
+          if(selection && !selection.isCollapsed && selection.toString().trim()) return;
+          if(Date.now()-lastPointerAt<250) return;
+          ev.stopPropagation();
+          handleToken(s,part,box);
+        });
+        s.addEventListener("pointerdown",ev=>{
+          if(ev.pointerType==="mouse" && ev.button!==0) return;
+          pointerInfo={x:ev.clientX,y:ev.clientY,time:Date.now(),word:part,el:s,box};
+        },{passive:true});
+        s.addEventListener("pointerup",ev=>{
+          if(!pointerInfo) return;
+          const info=pointerInfo; pointerInfo=null; lastPointerAt=Date.now();
+          const moved=Math.hypot(ev.clientX-info.x,ev.clientY-info.y)>8;
+          const elapsed=Date.now()-info.time;
+          // Não usamos preventDefault: pressionar/arrastar fica inteiramente sob controle do iPad.
+          if(!moved && elapsed<350){
+            setTimeout(()=>{
+              const sel=window.getSelection();
+              if(!sel || sel.isCollapsed || !sel.toString().trim()) handleToken(info.el,info.word,info.box);
+            },20);
+          }
+        },{passive:true});
+      }
+      box.appendChild(s);
+    }
+    layer.appendChild(box);
+    currentTextItems.push({str:item.str,box});
+  }
+}
+
+function nodeInTextLayer(node){
+  const el=node?.nodeType===3?node.parentElement:node;
+  return el?.closest?.(".text-layer");
 }
 
 function selectedTextHandler(){
- const sel=window.getSelection();
- if(!sel || sel.isCollapsed){return clearSelectionUI();}
- const anchor=sel.anchorNode?.parentElement?.closest?.(".text-layer");
- const focus=sel.focusNode?.parentElement?.closest?.(".text-layer");
- if(!anchor&&!focus)return;
- const text=sel.toString().replace(/\s+/g," ").trim();
- if(!text || text.length>1000)return;
- currentSelectionText=text;
- currentSelectionRange=sel.getRangeAt(0).cloneRange();
- currentSelectionContext=getSelectedContext(text);
- showSelectionAction(text,currentSelectionContext);
+  const sel=window.getSelection();
+  if(!sel || sel.isCollapsed){ clearSelectionUI(); return; }
+  if(!nodeInTextLayer(sel.anchorNode) || !nodeInTextLayer(sel.focusNode)) return;
+  const text=sel.toString().replace(/\s+/g," ").trim();
+  if(!text || text.length>1500){ clearSelectionUI(); return; }
+  currentSelectionText=text;
+  currentSelectionRange=sel.getRangeAt(0).cloneRange();
+  currentSelectionContext=getSelectedContext(text);
+  showSelectionAction(text,currentSelectionContext);
 }
+
 function getSelectedContext(text){
- const host=currentSelectionRange?.commonAncestorContainer?.parentElement?.closest?.('.text-item');
- const base=host?.textContent||text;
- const idx=base.toLowerCase().indexOf(text.toLowerCase());
- if(idx<0)return text;
- let start=idx,end=idx+text.length;while(start>0&&!/[.!?]/.test(base[start-1]))start--;while(end<base.length&&!/[.!?]/.test(base[end]))end++;
- return base.slice(start,end).trim().replace(/\s+/g," ");
+  // Contexto amplo e seguro: não depende de o início da seleção ser a primeira letra de um item.
+  const hostA=currentSelectionRange?.startContainer?.parentElement?.closest?.('.text-item');
+  const hostB=currentSelectionRange?.endContainer?.parentElement?.closest?.('.text-item');
+  const candidates=[hostA?.textContent,hostB?.textContent].filter(Boolean);
+  let base=candidates.join(' ').replace(/\s+/g,' ').trim();
+  if(!base) base=text;
+  const idx=base.toLowerCase().indexOf(text.toLowerCase());
+  if(idx<0) return text;
+  let start=idx,end=idx+text.length;
+  while(start>0&&!/[.!?]/.test(base[start-1])) start--;
+  while(end<base.length&&!/[.!?]/.test(base[end])) end++;
+  return base.slice(start,end).trim().replace(/\s+/g," ");
 }
+
 function showSelectionAction(text,context){
  $("selectionBar").classList.remove("hidden");
  $("selectedPreview").textContent=text;
@@ -382,15 +414,24 @@ function highlightContext(context,word){const re=new RegExp("("+String(word).rep
 function speakText(text){if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-US";speechSynthesis.speak(u)}else toast("Seu navegador não oferece leitura em voz alta.")}
 function saveHistory(term,translation,context){history.unshift({term,translation,context,time:Date.now()});history=history.slice(0,30);localStorage.setItem("mathread_history_v5",JSON.stringify(history))}
 
-document.addEventListener("selectionchange",selectedTextHandler);
-$("reader").addEventListener("touchend",()=>setTimeout(selectedTextHandler,80),{passive:true});
-$("prev").addEventListener("click",async()=>{if(pdf&&page>1){page--;await render()}});
-$("next").addEventListener("click",async()=>{if(pdf&&page<pdf.numPages){page++;await render()}});
-$("plus").addEventListener("click",async()=>{if(pdf){scale=Math.min(2.5,scale+.15);await render()}});
-$("minus").addEventListener("click",async()=>{if(pdf){scale=Math.max(.6,scale-.15);await render()}});
-$("close").addEventListener("click",()=>{$("drawer").classList.add("hidden");clearSelectionUI();window.getSelection()?.removeAllRanges()});
+document.addEventListener("selectionchange",()=>requestAnimationFrame(selectedTextHandler));
+$("prev").addEventListener("click",async()=>{if(pdf&&page>1&&!rendering){page--;await render()}});
+$("next").addEventListener("click",async()=>{if(pdf&&page<pdf.numPages&&!rendering){page++;await render()}});
+$("plus").addEventListener("click",async()=>{if(pdf&&!rendering){scale=Math.min(2.5,Math.round((scale+.15)*100)/100);await render()}});
+$("minus").addEventListener("click",async()=>{if(pdf&&!rendering){scale=Math.max(.6,Math.round((scale-.15)*100)/100);await render()}});
+$("close").addEventListener("click",ev=>{ev.preventDefault();ev.stopPropagation();$("drawer").classList.add("hidden");clearSelectionUI();window.getSelection()?.removeAllRanges()});
+["prev","next","plus","minus","close","history","vocab"].forEach(id=>$(id)?.addEventListener("pointerdown",ev=>ev.stopPropagation(),{passive:true}));
 $("vocab").onclick=()=>{$("drawer").classList.remove("hidden");if(!vocab.length){$("drawerContent").innerHTML='<div class="eyebrow">ESTUDO</div><h2>⭐ Vocabulário</h2><p class="empty">Você ainda não salvou nenhuma palavra ou frase.</p>';return}$("drawerContent").innerHTML='<div class="eyebrow">ESTUDO</div><h2>⭐ Vocabulário</h2>'+vocab.map((x,i)=>`<div class="vrow"><button class="remove" data-i="${i}">×</button><div class="vword">${esc(x.term)}</div><div class="vtrans">🇧🇷 ${esc(x.translation)}</div></div>`).join("");document.querySelectorAll(".remove").forEach(b=>b.onclick=()=>{vocab.splice(+b.dataset.i,1);localStorage.setItem("mathread_vocab_v5",JSON.stringify(vocab));$("vocab").click()})};
 $("history").onclick=()=>{$("drawer").classList.remove("hidden");if(!history.length){$("drawerContent").innerHTML='<div class="eyebrow">HISTÓRICO</div><h2>🕘 Histórico</h2><p class="empty">Nenhuma consulta ainda.</p>';return}$("drawerContent").innerHTML='<div class="eyebrow">HISTÓRICO</div><h2>🕘 Últimas consultas</h2>'+history.map(x=>`<div class="vrow historyRow"><div></div><div class="vword">${esc(x.term)}</div><div class="vtrans">🇧🇷 ${esc(x.translation)}</div></div>`).join("")};
 function toast(t){$("toast").textContent=t;$("toast").style.display="block";clearTimeout(window.__toast);window.__toast=setTimeout(()=>$("toast").style.display="none",2200)}
+
+// Atalhos úteis no teclado/computador e acessibilidade dos controles.
+document.addEventListener("keydown",async e=>{
+  if(!pdf || rendering) return;
+  if(e.key==="ArrowLeft" && page>1){page--;await render();}
+  else if(e.key==="ArrowRight" && page<pdf.numPages){page++;await render();}
+  else if((e.key==="+"||e.key==="=")&&!e.metaKey&&!e.ctrlKey){scale=Math.min(2.5,Math.round((scale+.15)*100)/100);await render();}
+  else if(e.key==="-"&&!e.metaKey&&!e.ctrlKey){scale=Math.max(.6,Math.round((scale-.15)*100)/100);await render();}
+});
 
 if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{});}
