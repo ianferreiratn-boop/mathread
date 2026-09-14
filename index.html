@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>MathRead V2</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">Math<span>Read</span></div>
+  <div class="tagline">Seu artigo em inglês. Seu dicionário matemático.</div>
+</header>
+<nav class="toolbar">
+  <label class="upload">📄 Abrir PDF<input id="pdfInput" type="file" accept="application/pdf"></label>
+  <button id="prev" disabled>‹</button><span id="pageInfo">— / —</span><button id="next" disabled>›</button>
+  <button id="minus" disabled>−</button><span id="zoom">100%</span><button id="plus" disabled>+</button>
+  <button id="vocab">⭐ Vocabulário</button>
+</nav>
+
+<main>
+  <section id="welcome" class="welcome">
+    <div class="logo">∑</div>
+    <h1>Leia artigos matemáticos com mais autonomia.</h1>
+    <p>Abra um PDF, selecione uma palavra ou expressão e veja a tradução imediatamente.</p>
+    <p class="small">V2: seleção de texto real + termos matemáticos + vocabulário.</p>
+  </section>
+
+  <section id="reader" class="reader hidden">
+    <div id="pageWrap" class="page-wrap">
+      <canvas id="canvas"></canvas>
+      <div id="textLayer" class="text-layer"></div>
+    </div>
+  </section>
+</main>
+
+<aside id="drawer" class="drawer hidden">
+  <button id="close" class="close">×</button>
+  <div id="drawerContent"></div>
+</aside>
+<div id="toast"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
