@@ -388,7 +388,36 @@ function getContext(box,word){let sentence=box.textContent||"";const idx=sentenc
 function showLoading(word,context,phrase){$("drawer").classList.remove("hidden");$("drawerContent").innerHTML=`<div class="eyebrow">${phrase?"FRASE SELECIONADA":"PALAVRA"}</div><div class="term">${esc(word)}</div><div class="loading">⚡ Procurando a tradução…</div>`}
 function findGlossaryPhrase(text){const exact=local(text);if(exact)return {...exact,source:"glossário matemático"};const words=normalize(text).split(/\s+/);for(let n=Math.min(8,words.length);n>=2;n--){for(let i=0;i<=words.length-n;i++){const ph=words.slice(i,i+n).join(" ");if(D[ph])return {translation:D[ph],math:true,source:"expressão matemática"}}}return null}
 async function translateSmart(word,context){let r=findGlossaryPhrase(word);if(r)return r;try{const q=encodeURIComponent(word);const res=await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=en|pt-BR`);const data=await res.json();const tr=data?.responseData?.translatedText;if(tr)return {translation:tr,math:false,source:"tradução automática"}}catch(e){}return {translation:"Tradução não encontrada.",math:false,source:"indisponível"}}
-async function translatePhraseSmart(text,context){let r=findGlossaryPhrase(text);if(r)return r;try{const q=encodeURIComponent(text);const res=await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=en|pt-BR`);const data=await res.json();const tr=data?.responseData?.translatedText;if(tr)return {translation:tr,math:false,source:"tradução automática"}}catch(e){}return {translation:"Tradução não encontrada.",math:false,source:"indisponível"}}
+async function translatePhraseSmart(text,context){
+  let r=findGlossaryPhrase(text);if(r)return r;
+  const clean=String(text||'').replace(/\s+/g,' ').trim();
+  if(!clean)return {translation:"Tradução não encontrada.",math:false,source:"indisponível"};
+  // A API pública do MyMemory aceita no máximo cerca de 500 caracteres por requisição.
+  // O MathRead não impõe limite à seleção: para trechos maiores, divide automaticamente
+  // em blocos menores, preferindo terminar em pontuação/espaços, e junta as traduções.
+  const chunks=[];let rest=clean;const MAX=450;
+  while(rest.length>MAX){
+    let cut=rest.lastIndexOf(' ',MAX);
+    const punct=Math.max(rest.lastIndexOf('. ',MAX),rest.lastIndexOf('; ',MAX),rest.lastIndexOf(': ',MAX),rest.lastIndexOf(', ',MAX));
+    if(punct>MAX*0.55)cut=punct+1;
+    if(cut<80)cut=MAX;
+    chunks.push(rest.slice(0,cut).trim());rest=rest.slice(cut).trim();
+  }
+  if(rest)chunks.push(rest);
+  try{
+    const translated=[];
+    for(const chunk of chunks){
+      const q=encodeURIComponent(chunk);
+      const res=await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=en|pt-BR`);
+      if(!res.ok)throw new Error('translation request failed');
+      const data=await res.json();
+      const tr=data?.responseData?.translatedText;
+      if(!tr)throw new Error('empty translation');
+      translated.push(tr);
+    }
+    return {translation:translated.join(' '),math:false,source:chunks.length>1?"tradução automática (trecho dividido automaticamente)":"tradução automática"};
+  }catch(e){return {translation:"Tradução não encontrada. Tente selecionar um trecho menor ou novamente em instantes.",math:false,source:"indisponível"}}
+}
 function mathDefinition(word){const k=normalize(word);const defs={
 "convergence":"Comportamento em que uma sequência, série ou processo se aproxima de um limite segundo uma noção de convergência especificada.",
 "measure":"Em teoria da medida, uma função que atribui um tamanho a conjuntos e é contavelmente aditiva em uma sigma-álgebra.",
