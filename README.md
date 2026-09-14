@@ -1,4 +1,4 @@
-# MathRead V6
+# MathRead V7
 
 Leitor de artigos matemáticos em inglês com tradução por toque, seleção de frases, vocabulário especializado e páginas públicas para descoberta em mecanismos de busca.
 
@@ -10,6 +10,11 @@ Leitor de artigos matemáticos em inglês com tradução por toque, seleção de
 - vocabulário e histórico
 - glossário amplo de matemática, probabilidade e processos estocásticos
 - PWA
+
+## V7: seleção natural e controles
+- seleção de frases por pressionar e segurar + arrastar no iPad/iPhone
+- controles de página e zoom reforçados
+- botão fechar reforçado
 
 ## V6: descoberta
 - title e meta description otimizados
