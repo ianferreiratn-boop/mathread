@@ -3,8 +3,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/p
 
 const $=id=>document.getElementById(id);
 const canvas=$("canvas"),ctx=canvas.getContext("2d"),layer=$("textLayer"),wrap=$("pageWrap");
-let pdf=null,page=1,scale=1.25,readingMode=true,currentTextItems=[],currentToken=null;
-let vocab=JSON.parse(localStorage.getItem("mathread_vocab_v3")||"[]");
+let pdf=null,page=1,scale=1.25,readingMode=true,currentTextItems=[],currentToken=null,currentFileName="";
+let vocab=JSON.parse(localStorage.getItem("mathread_vocab_v5")||localStorage.getItem("mathread_vocab_v4")||localStorage.getItem("mathread_vocab_v3")||"[]");
 
 // Glossário inicial amplo de inglês matemático. Expressões mais longas são consultadas antes de palavras isoladas.
 const D={
@@ -24,35 +24,313 @@ const D={
 "nearly":"quase", "approximately":"aproximadamente", "sufficiently":"suficientemente", "arbitrary":"arbitrário(a)", "unique":"único(a)", "existence":"existência", "uniqueness":"unicidade", "necessary":"necessário(a)", "sufficient":"suficiente", "equivalent":"equivalente", "equivalence":"equivalência", "implies":"implica", "implied":"implicado(a)", "holds":"vale", "valid":"válido(a)", "finite":"finito(a)", "infinite":"infinito(a)", "where":"onde", "over":"sobre", "throughout":"ao longo de", "respectively":"respectivamente", "particular":"particular", "arbitrarily":"arbitrariamente", "eventually":"eventualmente", "otherwise":"caso contrário", "indeed":"de fato", "clearly":"claramente", "obviously":"obviamente", "similarly":"similarmente", "analogously":"analogamente", "straightforward":"direto(a)", "trivial":"trivial", "nontrivial":"não trivial", "standard":"padrão", "classical":"clássico(a)", "natural":"natural", "canonical":"canônico(a)", "generic":"genérico(a)", "specific":"específico(a)", "finite-dimensional":"de dimensão finita", "infinite-dimensional":"de dimensão infinita"
 };
 
+// MathRead V5 — Banco especializado em probabilidade, processos estocásticos,
+// sequências de lançamentos e problemas/paradoxos contraintuitivos.
+// As traduções abaixo são um glossário local; expressões longas têm prioridade.
+Object.assign(D, {
+  // Fundamentos de probabilidade
+  "outcome":"resultado", "elementary outcome":"resultado elementar", "event":"evento", "events":"eventos",
+  "sample point":"ponto amostral", "sample points":"pontos amostrais", "sample space":"espaço amostral",
+  "event space":"espaço de eventos", "sure event":"evento certo", "impossible event":"evento impossível",
+  "complementary event":"evento complementar", "complement":"complemento", "union":"união", "intersection":"interseção",
+  "disjoint events":"eventos disjuntos", "mutually exclusive":"mutuamente exclusivos", "pairwise disjoint":"dois a dois disjuntos",
+  "collectively exhaustive":"exaustivos em conjunto", "partition":"partição", "partition of the sample space":"partição do espaço amostral",
+  "probability":"probabilidade", "probabilities":"probabilidades", "probabilistic":"probabilístico(a)",
+  "probability function":"função de probabilidade", "probability measure":"medida de probabilidade",
+  "probability distribution":"distribuição de probabilidade", "probability law":"lei de probabilidade",
+  "axiom":"axioma", "axioms of probability":"axiomas da probabilidade", "Kolmogorov axioms":"axiomas de Kolmogorov",
+  "countable additivity":"aditividade contável", "finite additivity":"aditividade finita", "normalization":"normalização",
+  "total probability":"probabilidade total", "law of total probability":"lei da probabilidade total",
+  "conditional probability":"probabilidade condicional", "conditional event":"evento condicional",
+  "conditional on":"condicionado a", "given that":"dado que", "provided that":"desde que / dado que",
+  "Bayes' theorem":"teorema de Bayes", "Bayes theorem":"teorema de Bayes", "Bayesian":"bayesiano(a)",
+  "Bayesian inference":"inferência bayesiana", "prior probability":"probabilidade a priori", "prior distribution":"distribuição a priori",
+  "posterior probability":"probabilidade a posteriori", "posterior distribution":"distribuição a posteriori",
+  "likelihood":"verossimilhança", "likelihood function":"função de verossimilhança", "evidence":"evidência",
+  "base rate":"taxa-base", "base-rate fallacy":"falácia da taxa-base", "odds":"odds / chances", "odds ratio":"razão de chances",
+  "independence":"independência", "independent events":"eventos independentes", "conditionally independent":"condicionalmente independentes",
+  "conditional independence":"independência condicional", "pairwise independent":"independentes dois a dois",
+  "mutually independent":"mutuamente independentes", "exchangeable":"permutável / intercambiável", "exchangeability":"permutabilidade / intercambiabilidade",
+  "random experiment":"experimento aleatório", "random trial":"ensaio aleatório", "experiment":"experimento",
+  "trial":"ensaio", "repeated trials":"ensaios repetidos", "fair coin":"moeda justa", "biased coin":"moeda viciada",
+  "fair die":"dado justo", "loaded die":"dado viciado", "fair game":"jogo justo", "fairness":"justiça / equidade do jogo",
+
+  // Variáveis aleatórias e distribuições
+  "random variable":"variável aleatória", "random variables":"variáveis aleatórias", "discrete random variable":"variável aleatória discreta",
+  "continuous random variable":"variável aleatória contínua", "real-valued random variable":"variável aleatória real",
+  "integer-valued random variable":"variável aleatória com valores inteiros", "random vector":"vetor aleatório",
+  "random sequence":"sequência aleatória", "random field":"campo aleatório", "random measure":"medida aleatória",
+  "support":"suporte", "probability mass function":"função massa de probabilidade", "probability density function":"função densidade de probabilidade",
+  "density":"densidade", "mass function":"função massa", "distribution function":"função de distribuição",
+  "cumulative distribution function":"função de distribuição acumulada", "survival function":"função de sobrevivência",
+  "tail probability":"probabilidade de cauda", "tail distribution":"distribuição de cauda", "quantile":"quantil", "quantile function":"função quantil",
+  "median":"mediana", "mode":"moda", "mean":"média", "arithmetic mean":"média aritmética", "expected value":"valor esperado",
+  "expectation":"esperança", "conditional expectation":"esperança condicional", "variance":"variância", "standard deviation":"desvio-padrão",
+  "standard error":"erro-padrão", "covariance":"covariância", "correlation":"correlação", "correlation coefficient":"coeficiente de correlação",
+  "moment":"momento", "raw moment":"momento ordinário", "central moment":"momento central", "factorial moment":"momento fatorial",
+  "moment generating function":"função geradora de momentos", "probability generating function":"função geradora de probabilidades",
+  "characteristic function":"função característica", "cumulant":"cumulante", "cumulant generating function":"função geradora de cumulantes",
+  "Bernoulli distribution":"distribuição de Bernoulli", "binomial distribution":"distribuição binomial", "geometric distribution":"distribuição geométrica",
+  "negative binomial distribution":"distribuição binomial negativa", "hypergeometric distribution":"distribuição hipergeométrica",
+  "Poisson distribution":"distribuição de Poisson", "multinomial distribution":"distribuição multinomial",
+  "uniform distribution":"distribuição uniforme", "discrete uniform distribution":"distribuição uniforme discreta",
+  "continuous uniform distribution":"distribuição uniforme contínua", "normal distribution":"distribuição normal",
+  "Gaussian distribution":"distribuição gaussiana", "standard normal distribution":"distribuição normal padrão",
+  "exponential distribution":"distribuição exponencial", "gamma distribution":"distribuição gama", "beta distribution":"distribuição beta",
+  "chi-square distribution":"distribuição qui-quadrado", "Student's t distribution":"distribuição t de Student",
+  "F distribution":"distribuição F", "lognormal distribution":"distribuição lognormal", "Cauchy distribution":"distribuição de Cauchy",
+  "Pareto distribution":"distribuição de Pareto", "power law":"lei de potência", "heavy-tailed":"de cauda pesada", "light-tailed":"de cauda leve",
+  "long-tailed":"de cauda longa", "degenerate distribution":"distribuição degenerada", "mixture distribution":"distribuição mistura",
+
+  // Convergência e leis limite
+  "convergence in probability":"convergência em probabilidade", "almost sure convergence":"convergência quase certa",
+  "almost surely":"quase certamente", "almost everywhere":"quase em todo lugar", "with probability one":"com probabilidade um",
+  "convergence in distribution":"convergência em distribuição", "convergence in law":"convergência em lei",
+  "convergence in mean":"convergência em média", "convergence in L1":"convergência em L1", "convergence in L2":"convergência em L2",
+  "convergence in mean square":"convergência em média quadrática", "weak convergence":"convergência fraca",
+  "weakly converges":"converge fracamente", "tightness":"tensão / tightness", "tight":"tenso / tight", "uniform integrability":"integrabilidade uniforme",
+  "law of large numbers":"lei dos grandes números", "weak law of large numbers":"lei fraca dos grandes números",
+  "strong law of large numbers":"lei forte dos grandes números", "central limit theorem":"teorema central do limite",
+  "local central limit theorem":"teorema central do limite local", "multivariate central limit theorem":"teorema central do limite multivariado",
+  "law of the iterated logarithm":"lei do logaritmo iterado", "large deviations":"grandes desvios", "large deviation principle":"princípio dos grandes desvios",
+  "moderate deviations":"desvios moderados", "invariance principle":"princípio de invariância", "functional central limit theorem":"teorema central do limite funcional",
+  "limit theorem":"teorema limite", "limiting distribution":"distribuição limite", "asymptotic distribution":"distribuição assintótica",
+  "asymptotically normal":"assintoticamente normal", "asymptotic behavior":"comportamento assintótico", "rate of convergence":"taxa de convergência",
+
+  // Contagem e combinações úteis em probabilidade
+  "counting argument":"argumento de contagem", "counting principle":"princípio de contagem", "permutation":"permutação", "permutations":"permutações",
+  "combination":"combinação", "combinations":"combinações", "binomial coefficient":"coeficiente binomial", "multinomial coefficient":"coeficiente multinomial",
+  "occupancy problem":"problema de ocupação", "occupancy model":"modelo de ocupação", "balls and bins":"bolas e urnas",
+  "urn model":"modelo de urnas", "coupon collector":"colecionador de cupons", "coupon collector problem":"problema do colecionador de cupons",
+  "birthday problem":"problema do aniversário", "birthday paradox":"paradoxo do aniversário", "birthday collision":"colisão de aniversários",
+  "collision probability":"probabilidade de colisão", "collision problem":"problema de colisões", "matching problem":"problema de coincidências",
+  "derangement":"desarranjo", "inclusion-exclusion":"inclusão-exclusão", "inclusion-exclusion principle":"princípio da inclusão-exclusão",
+  "pigeonhole principle":"princípio da casa dos pombos", "sampling without replacement":"amostragem sem reposição",
+  "sampling with replacement":"amostragem com reposição", "with replacement":"com reposição", "without replacement":"sem reposição",
+
+  // Sequências de moedas e padrões — núcleo especial da IC
+  "coin toss":"lançamento de moeda", "coin tossing":"lançamentos de moeda", "coin flip":"lançamento de moeda", "coin flips":"lançamentos de moeda",
+  "heads":"cara", "head":"cara", "tails":"coroa", "tail":"coroa", "sequence of coin tosses":"sequência de lançamentos de moeda",
+  "binary sequence":"sequência binária", "binary string":"palavra binária", "string":"palavra / cadeia", "pattern":"padrão",
+  "pattern matching":"casamento de padrões", "pattern occurrence":"ocorrência de padrão", "pattern occurrences":"ocorrências de padrões",
+  "pattern matching problem":"problema de casamento de padrões", "pattern waiting time":"tempo de espera pelo padrão",
+  "waiting time":"tempo de espera", "waiting time distribution":"distribuição do tempo de espera", "first occurrence":"primeira ocorrência",
+  "first passage time":"tempo de primeira passagem", "first hitting time":"tempo do primeiro atingimento", "hitting time":"tempo de atingimento",
+  "stopping time":"tempo de parada", "stopping rule":"regra de parada", "stopping problem":"problema de parada",
+  "run":"sequência consecutiva / corrida", "runs":"sequências consecutivas", "run length":"comprimento da sequência consecutiva",
+  "longest run":"maior sequência consecutiva", "run distribution":"distribuição de sequências consecutivas", "runs of heads":"sequências consecutivas de caras",
+  "runs of tails":"sequências consecutivas de coroas", "alternating sequence":"sequência alternada", "alternating runs":"sequências alternadas",
+  "overlap":"sobreposição", "overlapping patterns":"padrões sobrepostos", "pattern overlap":"sobreposição de padrões",
+  "self-overlap":"auto-sobreposição", "border":"borda / prefixo-sufixo comum", "prefix":"prefixo", "suffix":"sufixo",
+  "proper prefix":"prefixo próprio", "proper suffix":"sufixo próprio", "prefix-suffix overlap":"sobreposição prefixo-sufixo",
+  "non-overlapping":"sem sobreposição", "overlapping occurrences":"ocorrências sobrepostas", "pattern competition":"competição entre padrões",
+  "pattern race":"corrida entre padrões", "pattern waiting game":"jogo de espera por padrões", "pattern probability":"probabilidade de padrão",
+  "pattern occurrence time":"tempo de ocorrência do padrão", "pattern hitting time":"tempo de atingimento do padrão",
+  "Penney's game":"jogo de Penney", "Penney game":"jogo de Penney", "Penney-ante":"Penney-ante", "Penney's game strategy":"estratégia do jogo de Penney",
+  "Conway's formula":"fórmula de Conway", "Conway leading number":"número líder de Conway", "pattern odds":"odds entre padrões",
+  "competing patterns":"padrões concorrentes", "competing sequences":"sequências concorrentes", "sequence race":"corrida de sequências",
+  "winner":"vencedor", "loser":"perdedor", "winning pattern":"padrão vencedor", "first pattern to appear":"primeiro padrão a aparecer",
+  "fair coin tosses":"lançamentos de moeda justa", "biased coin tosses":"lançamentos de moeda viciada",
+  "Bernoulli trials":"ensaios de Bernoulli", "Bernoulli sequence":"sequência de Bernoulli", "Bernoulli process":"processo de Bernoulli",
+  "independent coin tosses":"lançamentos de moeda independentes", "successive tosses":"lançamentos sucessivos", "successive trials":"ensaios sucessivos",
+
+  // Processos estocásticos e cadeias
+  "stochastic process":"processo estocástico", "random process":"processo aleatório", "discrete-time process":"processo em tempo discreto",
+  "continuous-time process":"processo em tempo contínuo", "stationary process":"processo estacionário", "strictly stationary":"estritamente estacionário",
+  "weakly stationary":"fracamente estacionário", "stationarity":"estacionariedade", "strict stationarity":"estacionariedade estrita",
+  "Markov chain":"cadeia de Markov", "Markov process":"processo de Markov", "Markov property":"propriedade de Markov",
+  "memoryless property":"propriedade sem memória", "transition probability":"probabilidade de transição", "transition matrix":"matriz de transição",
+  "transition kernel":"núcleo de transição", "state space":"espaço de estados", "state":"estado", "states":"estados",
+  "initial state":"estado inicial", "initial distribution":"distribuição inicial", "absorbing state":"estado absorvente",
+  "absorbing chain":"cadeia absorvente", "absorbing probability":"probabilidade de absorção", "communicating states":"estados comunicantes",
+  "irreducible":"irredutível", "reducible":"redutível", "aperiodic":"aperiódica", "periodic":"periódica", "recurrent":"recorrente",
+  "transient":"transiente", "positive recurrent":"recorrente positiva", "null recurrent":"recorrente nula", "stationary distribution":"distribuição estacionária",
+  "invariant distribution":"distribuição invariante", "invariant measure":"medida invariante", "detailed balance":"balanço detalhado",
+  "reversible":"reversível", "reversibility":"reversibilidade", "ergodic chain":"cadeia ergódica", "mixing":"mistura",
+  "mixing time":"tempo de mistura", "coupling":"acoplamento", "coupling argument":"argumento de acoplamento", "coupling time":"tempo de acoplamento",
+  "random walk":"passeio aleatório", "simple random walk":"passeio aleatório simples", "symmetric random walk":"passeio aleatório simétrico",
+  "biased random walk":"passeio aleatório enviesado", "nearest-neighbor random walk":"passeio aleatório de vizinhos mais próximos",
+  "gambler's ruin":"ruína do jogador", "gambler's ruin problem":"problema da ruína do jogador", "ruin probability":"probabilidade de ruína",
+  "hitting probability":"probabilidade de atingimento", "return probability":"probabilidade de retorno", "return time":"tempo de retorno",
+  "occupation time":"tempo de ocupação", "occupation measure":"medida de ocupação", "local time":"tempo local",
+  "martingale":"martingal", "martingale difference":"diferença de martingal", "martingale property":"propriedade de martingal",
+  "submartingale":"submartingal", "supermartingale":"supermartingal", "filtration":"filtração", "adapted":"adaptado(a)",
+  "predictable":"previsível", "optional stopping":"parada opcional", "optional stopping theorem":"teorema da parada opcional",
+  "Doob's inequality":"desigualdade de Doob", "Doob decomposition":"decomposição de Doob", "stopping time":"tempo de parada",
+  "Brownian motion":"movimento browniano", "Wiener process":"processo de Wiener", "Brownian path":"trajetória browniana",
+  "quadratic variation":"variação quadrática", "stochastic integral":"integral estocástica", "Ito integral":"integral de Itô",
+  "Ito's formula":"fórmula de Itô", "stochastic differential equation":"equação diferencial estocástica", "diffusion":"difusão",
+  "birth-death process":"processo de nascimento e morte", "Poisson process":"processo de Poisson", "counting process":"processo de contagem",
+  "renewal process":"processo de renovação", "renewal theory":"teoria da renovação", "renewal equation":"equação de renovação",
+  "branching process":"processo de ramificação", "Galton-Watson process":"processo de Galton-Watson", "extinction probability":"probabilidade de extinção",
+
+  // Entropia, informação e dependência
+  "entropy":"entropia", "Shannon entropy":"entropia de Shannon", "Rényi entropy":"entropia de Rényi", "Renyi entropy":"entropia de Rényi",
+  "relative entropy":"entropia relativa", "Kullback-Leibler divergence":"divergência de Kullback-Leibler", "mutual information":"informação mútua",
+  "conditional entropy":"entropia condicional", "information content":"conteúdo de informação", "cross-entropy":"entropia cruzada",
+  "dependence":"dependência", "association":"associação", "positive dependence":"dependência positiva", "negative dependence":"dependência negativa",
+  "uncorrelated":"não correlacionado", "correlated":"correlacionado", "decorrelation":"descorrelação", "autocorrelation":"autocorrelação",
+  "autocovariance":"autocovariância", "correlation structure":"estrutura de correlação", "dependence structure":"estrutura de dependência",
+
+  // Desigualdades e ferramentas clássicas
+  "Markov inequality":"desigualdade de Markov", "Chebyshev inequality":"desigualdade de Chebyshev", "Jensen's inequality":"desigualdade de Jensen",
+  "Jensen inequality":"desigualdade de Jensen", "Cauchy-Schwarz inequality":"desigualdade de Cauchy-Schwarz",
+  "Hölder inequality":"desigualdade de Hölder", "Holder inequality":"desigualdade de Hölder", "Minkowski inequality":"desigualdade de Minkowski",
+  "union bound":"cota da união", "Boole's inequality":"desigualdade de Boole", "Bonferroni inequality":"desigualdade de Bonferroni",
+  "Paley-Zygmund inequality":"desigualdade de Paley-Zygmund", "Azuma-Hoeffding inequality":"desigualdade de Azuma-Hoeffding",
+  "Hoeffding inequality":"desigualdade de Hoeffding", "Chernoff bound":"cota de Chernoff", "Chernoff inequality":"desigualdade de Chernoff",
+  "concentration inequality":"desigualdade de concentração", "concentration of measure":"concentração de medida",
+  "Borel-Cantelli lemma":"lema de Borel-Cantelli", "first Borel-Cantelli lemma":"primeiro lema de Borel-Cantelli",
+  "second Borel-Cantelli lemma":"segundo lema de Borel-Cantelli", "zero-one law":"lei zero-um", "Kolmogorov zero-one law":"lei zero-um de Kolmogorov",
+  "tail event":"evento de cauda", "tail sigma-algebra":"sigma-álgebra de cauda", "exchangeable sequence":"sequência intercambiável",
+
+  // Paradoxos e probabilidade contraintuitiva — núcleo especial da IC
+  "counterintuitive probability":"probabilidade contraintuitiva", "counterintuitive":"contraintuitivo(a)", "paradox":"paradoxo", "paradoxes":"paradoxos",
+  "probability paradox":"paradoxo de probabilidade", "probability paradoxes":"paradoxos de probabilidade", "paradoxical":"paradoxal",
+  "Monty Hall problem":"problema de Monty Hall", "Monty Hall paradox":"paradoxo de Monty Hall", "Bertrand's paradox":"paradoxo de Bertrand",
+  "Bertrand paradox":"paradoxo de Bertrand", "birthday paradox":"paradoxo do aniversário", "Simpson's paradox":"paradoxo de Simpson",
+  "Simpson paradox":"paradoxo de Simpson", "St. Petersburg paradox":"paradoxo de São Petersburgo", "Saint Petersburg paradox":"paradoxo de São Petersburgo",
+  "St Petersburg paradox":"paradoxo de São Petersburgo", "boy or girl paradox":"paradoxo do menino ou menina",
+  "two envelopes paradox":"paradoxo dos dois envelopes", "two-envelope paradox":"paradoxo dos dois envelopes",
+  "inspection paradox":"paradoxo da inspeção", "waiting time paradox":"paradoxo do tempo de espera", "bus paradox":"paradoxo do ônibus",
+  "friendship paradox":"paradoxo da amizade", "friendship paradoxes":"paradoxos da amizade", "false positive paradox":"paradoxo do falso positivo",
+  "prosecutor's fallacy":"falácia do promotor", "inverse probability fallacy":"falácia da probabilidade inversa",
+  "gambler's fallacy":"falácia do jogador", "hot-hand fallacy":"falácia da mão quente", "law of small numbers":"lei dos pequenos números",
+  "regression to the mean":"regressão à média", "regression fallacy":"falácia da regressão", "base rate neglect":"negligência da taxa-base",
+  "clustering illusion":"ilusão de agrupamento", "recency bias":"viés de recência", "selection bias":"viés de seleção",
+  "survivorship bias":"viés de sobrevivência", "sampling bias":"viés de amostragem", "selection effect":"efeito de seleção",
+  "conditioning effect":"efeito do condicionamento", "conditioning paradox":"paradoxo do condicionamento",
+  "Borel paradox":"paradoxo de Borel", "Bertrand's box paradox":"paradoxo das caixas de Bertrand", "Joseph Bertrand":"Joseph Bertrand",
+  "three prisoners problem":"problema dos três prisioneiros", "three prisoners paradox":"paradoxo dos três prisioneiros",
+  "boy-girl paradox":"paradoxo do menino-menina", "boy girl paradox":"paradoxo do menino-menina",
+  "nontransitive dice":"dados não transitivos", "non-transitive dice":"dados não transitivos", "nontransitive game":"jogo não transitivo",
+  "non-transitive game":"jogo não transitivo", "intransitive dice":"dados intransitivos", "nontransitivity":"não transitividade",
+  "randomness paradox":"paradoxo da aleatoriedade", "paradox of randomness":"paradoxo da aleatoriedade",
+  "gambler's ruin":"ruína do jogador", "martingale betting system":"sistema de apostas martingale", "doubling strategy":"estratégia de dobramento",
+  "martingale strategy":"estratégia martingale", "betting strategy":"estratégia de apostas", "gambling strategy":"estratégia de jogo",
+  "fair betting strategy":"estratégia de apostas justa", "optional stopping paradox":"paradoxo da parada opcional",
+  "infinite expectation":"esperança infinita", "infinite expected value":"valor esperado infinito", "finite expectation":"esperança finita",
+  "heavy tail paradox":"paradoxo de cauda pesada", "rare event":"evento raro", "rare events":"eventos raros", "rare-event probability":"probabilidade de evento raro",
+  "surprising probability":"probabilidade surpreendente", "unexpected outcome":"resultado inesperado", "counterexample":"contraexemplo",
+
+  // Simulação e métodos computacionais em probabilidade
+  "simulation":"simulação", "Monte Carlo simulation":"simulação de Monte Carlo", "Monte Carlo method":"método de Monte Carlo",
+  "Monte Carlo estimate":"estimativa de Monte Carlo", "simulation study":"estudo de simulação", "simulated sample":"amostra simulada",
+  "random number":"número aleatório", "random number generator":"gerador de números aleatórios", "pseudo-random":"pseudoaleatório",
+  "pseudo-random number generator":"gerador de números pseudoaleatórios", "random seed":"semente aleatória", "replication":"replicação",
+  "empirical probability":"probabilidade empírica", "empirical distribution":"distribuição empírica", "empirical frequency":"frequência empírica",
+  "relative frequency":"frequência relativa", "observed frequency":"frequência observada", "law of averages":"lei das médias",
+  "sample path":"trajetória amostral", "realization":"realização", "trajectory":"trajetória", "sample trajectory":"trajetória amostral",
+
+  // Linguagem típica de artigos de probabilidade
+  "assume that":"suponha que", "suppose that":"suponha que", "let":"seja / considere", "denote":"denote", "denotes":"denota",
+  "let X be":"seja X", "for all":"para todo", "for every":"para todo", "there exists":"existe", "there exist":"existem",
+  "almost every":"quase todo", "except on a null set":"exceto em um conjunto nulo", "with high probability":"com alta probabilidade",
+  "with overwhelming probability":"com probabilidade esmagadoramente alta", "with probability tending to one":"com probabilidade tendendo a um",
+  "with positive probability":"com probabilidade positiva", "with probability zero":"com probabilidade zero", "with probability less than":"com probabilidade menor que",
+  "independent of":"independente de", "conditionally on":"condicionalmente a", "conditioned on":"condicionado a",
+  "under the assumption":"sob a hipótese", "under suitable conditions":"sob condições adequadas", "under mild assumptions":"sob hipóteses brandas",
+  "almost surely finite":"finito quase certamente", "finite almost surely":"finito quase certamente", "integrable":"integrável",
+  "square integrable":"quadrado-integrável", "summable":"somável", "measurable":"mensurável", "measurability":"mensurabilidade",
+  "integrability":"integrabilidade", "nonnegative":"não negativo", "nonnegative random variable":"variável aleatória não negativa",
+  "positive random variable":"variável aleatória positiva", "bounded random variable":"variável aleatória limitada",
+  "unbounded random variable":"variável aleatória ilimitada", "finite almost surely":"finito quase certamente",
+  "in expectation":"em esperança", "on average":"em média", "on the average":"em média", "in the long run":"a longo prazo",
+  "long-run behavior":"comportamento de longo prazo", "short-run behavior":"comportamento de curto prazo", "as n tends to infinity":"quando n tende a infinito",
+  "asymptotically":"assintoticamente", "eventually":"eventualmente", "infinitely often":"infinitas vezes", "finitely often":"finitas vezes",
+  "infinitely many times":"infinitas vezes", "almost never":"quase nunca", "typically":"tipicamente", "typically occurs":"ocorre tipicamente",
+  "rarely":"raramente", "frequently":"frequentemente", "with probability approaching one":"com probabilidade tendendo a um",
+  "expected waiting time":"tempo de espera esperado", "expected hitting time":"tempo esperado de atingimento",
+  "expected number of trials":"número esperado de ensaios", "expected number of occurrences":"número esperado de ocorrências",
+  "probability of occurrence":"probabilidade de ocorrência", "probability of hitting":"probabilidade de atingimento",
+  "probability of return":"probabilidade de retorno", "probability of extinction":"probabilidade de extinção",
+  "probability of survival":"probabilidade de sobrevivência", "survival probability":"probabilidade de sobrevivência",
+  "extinction event":"evento de extinção", "survival event":"evento de sobrevivência", "failure probability":"probabilidade de falha",
+  "success probability":"probabilidade de sucesso", "success event":"evento de sucesso", "failure event":"evento de falha"
+});
+
+
 const normalize=s=>s.toLowerCase().replace(/[“”‘’]/g,"'").replace(/\s+/g," ").trim();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+const stripPunct=s=>normalize(s).replace(/^[^a-zÀ-ÖØ-öø-ÿ0-9]+|[^a-zÀ-ÖØ-öø-ÿ0-9]+$/gi,"");
 function local(text){const t=normalize(text);if(D[t])return {translation:D[t],math:true};return null}
 
-$("pdfInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;page=1;$("welcome").classList.add("hidden");$("reader").classList.remove("hidden");["prev","next","minus","plus"].forEach(x=>$(x).disabled=false);await render();toast("PDF aberto. Agora toque em uma palavra.")}catch(err){console.error(err);toast("Não foi possível abrir este PDF.")}};
+let currentSelectionText="", currentSelectionRange=null, currentSelectionContext="";
+let history=JSON.parse(localStorage.getItem("mathread_history_v5")||"[]");
+
+$("pdfInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;page=1;currentFileName=f.name;$("welcome").classList.add("hidden");$("reader").classList.remove("hidden");["prev","next","minus","plus"].forEach(x=>$(x).disabled=false);await render();toast("PDF aberto. Toque em uma palavra ou selecione uma frase.")}catch(err){console.error(err);toast("Não foi possível abrir este PDF.")}};
 
 async function render(){const p=await pdf.getPage(page),vp=p.getViewport({scale});canvas.width=vp.width;canvas.height=vp.height;wrap.style.width=vp.width+"px";wrap.style.height=vp.height+"px";await p.render({canvasContext:ctx,viewport:vp}).promise;await renderText(p,vp);$("pageInfo").textContent=`${page} / ${pdf.numPages}`;$("zoom").textContent=Math.round(scale/1.25*100)+"%";window.getSelection()?.removeAllRanges()}
 
 async function renderText(p,vp){layer.innerHTML="";currentTextItems=[];const tc=await p.getTextContent();
  for(const item of tc.items){if(!item.str?.trim())continue;const tx=pdfjsLib.Util.transform(vp.transform,item.transform);const fontSize=Math.max(6,Math.hypot(tx[2],tx[3]));const box=document.createElement("span");box.className="text-item";box.style.left=tx[4]+"px";box.style.top=(tx[5]-fontSize)+"px";box.style.fontSize=fontSize+"px";box.style.fontFamily=item.fontName||"sans-serif";box.style.width=Math.max(item.width*vp.scale,1)+"px";box.style.height=Math.max(fontSize*1.35,8)+"px";
-   const parts=item.str.split(/(\s+|[.,;:!?()\[\]{}])/);let wordIndex=0;for(const part of parts){if(!part)continue;const s=document.createElement("span");if(/\s+/.test(part)||/^[.,;:!?()\[\]{}]$/.test(part)){s.textContent=part}else{wordIndex++;s.textContent=part;s.className="token";s.dataset.word=part;s.dataset.index=wordIndex;s.addEventListener("click",ev=>{ev.preventDefault();ev.stopPropagation();handleToken(s,part,box)});s.addEventListener("touchend",ev=>{ev.preventDefault();ev.stopPropagation();handleToken(s,part,box)},{passive:false})}box.appendChild(s)}layer.appendChild(box);currentTextItems.push({str:item.str,box})}
+   const parts=item.str.split(/(\s+|[.,;:!?()\[\]{}])/);for(const part of parts){if(!part)continue;const s=document.createElement("span");if(/\s+/.test(part)||/^[.,;:!?()\[\]{}]$/.test(part)){s.textContent=part}else{s.textContent=part;s.className="token";s.dataset.word=part;s.addEventListener("click",ev=>{if(readingMode){ev.preventDefault();ev.stopPropagation();handleToken(s,part,box)}});s.addEventListener("touchend",ev=>{if(readingMode){ev.preventDefault();ev.stopPropagation();handleToken(s,part,box)}},{passive:false})}box.appendChild(s)}layer.appendChild(box);currentTextItems.push({str:item.str,box})}
 }
 
-async function handleToken(el,word,box){currentToken=el;const clean=word.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+|[^A-Za-zÀ-ÖØ-öø-ÿ]+$/g,"");if(!clean)return;const ctxText=getContext(box,clean);showLoading(clean,ctxText);const result=await translateSmart(clean,ctxText);showResult(clean,result,ctxText)}
+function selectedTextHandler(){
+ if(readingMode)return;
+ const sel=window.getSelection();
+ if(!sel || sel.isCollapsed)return;
+ const text=sel.toString().replace(/\s+/g," ").trim();
+ if(!text || text.length>500)return;
+ currentSelectionText=text; currentSelectionRange=sel.getRangeAt(0).cloneRange();
+ currentSelectionContext=getSelectedContext(text);
+ showSelectionAction(text,currentSelectionContext);
+}
+function getSelectedContext(text){
+ const host=currentSelectionRange?.commonAncestorContainer?.parentElement?.closest?.('.text-item');
+ const base=host?.textContent||text;
+ const idx=base.toLowerCase().indexOf(text.toLowerCase());
+ if(idx<0)return text;
+ let start=idx,end=idx+text.length;while(start>0&&!/[.!?]/.test(base[start-1]))start--;while(end<base.length&&!/[.!?]/.test(base[end]))end++;
+ return base.slice(start,end).trim().replace(/\s+/g," ");
+}
+function showSelectionAction(text,context){
+ $("selectionBar").classList.remove("hidden");
+ $("selectedPreview").textContent=text;
+ $("translateSelection").onclick=()=>handlePhrase(text,context);
+ $("explainSelection").onclick=()=>showPhraseExplanation(text,context);
+}
+function clearSelectionUI(){$("selectionBar").classList.add("hidden")}
+async function handlePhrase(text,context){clearSelectionUI();showLoading(text,context,true);const result=await translatePhraseSmart(text,context);showPhraseResult(text,result,context)}
+async function handleToken(el,word,box){currentToken=el;const clean=word.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+|[^A-Za-zÀ-ÖØ-öø-ÿ]+$/g,"");if(!clean)return;const ctxText=getContext(box,clean);showLoading(clean,ctxText,false);const result=await translateSmart(clean,ctxText);showResult(clean,result,ctxText)}
 function getContext(box,word){let sentence=box.textContent||"";const idx=sentence.toLowerCase().indexOf(word.toLowerCase());if(idx<0)return sentence;let start=idx,end=idx+word.length;while(start>0&&!/[.!?]/.test(sentence[start-1]))start--;while(end<sentence.length&&!/[.!?]/.test(sentence[end]))end++;return sentence.slice(start,end).trim().replace(/\s+/g," ")}
 
-function showLoading(word,context){$("drawer").classList.remove("hidden");$("drawerContent").innerHTML=`<div class="term">${esc(word)}</div><div class="loading">⚡ Procurando a tradução…</div>`}
-async function translateSmart(word,context){let r=local(word);if(r)return {...r,source:"glossário matemático"};const phraseCandidates=[];const words=normalize(context).split(/\s+/);const idx=words.findIndex(x=>x.replace(/[^a-z-]/g,"")===normalize(word).replace(/[^a-z-]/g,""));for(let n=5;n>=2;n--){if(idx>=0){for(let start=Math.max(0,idx-n+1);start<=Math.min(idx,words.length-n);start++){const ph=words.slice(start,start+n).join(" ");if(D[ph])return {translation:D[ph],math:true,source:"expressão matemática"};phraseCandidates.push(ph)}}}
- try{const q=encodeURIComponent(word);const res=await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=en|pt-BR`);const data=await res.json();const tr=data?.responseData?.translatedText;if(tr)return {translation:tr,math:false,source:"tradução automática"}}catch(e){}return {translation:"Tradução não encontrada.",math:false,source:"indisponível"}}
+function showLoading(word,context,phrase){$("drawer").classList.remove("hidden");$("drawerContent").innerHTML=`<div class="eyebrow">${phrase?"FRASE SELECIONADA":"PALAVRA"}</div><div class="term">${esc(word)}</div><div class="loading">⚡ Procurando a tradução…</div>`}
+function findGlossaryPhrase(text){const exact=local(text);if(exact)return {...exact,source:"glossário matemático"};const words=normalize(text).split(/\s+/);for(let n=Math.min(8,words.length);n>=2;n--){for(let i=0;i<=words.length-n;i++){const ph=words.slice(i,i+n).join(" ");if(D[ph])return {translation:D[ph],math:true,source:"expressão matemática"}}}return null}
+async function translateSmart(word,context){let r=findGlossaryPhrase(word);if(r)return r;try{const q=encodeURIComponent(word);const res=await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=en|pt-BR`);const data=await res.json();const tr=data?.responseData?.translatedText;if(tr)return {translation:tr,math:false,source:"tradução automática"}}catch(e){}return {translation:"Tradução não encontrada.",math:false,source:"indisponível"}}
+async function translatePhraseSmart(text,context){let r=findGlossaryPhrase(text);if(r)return r;try{const q=encodeURIComponent(text);const res=await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=en|pt-BR`);const data=await res.json();const tr=data?.responseData?.translatedText;if(tr)return {translation:tr,math:false,source:"tradução automática"}}catch(e){}return {translation:"Tradução não encontrada.",math:false,source:"indisponível"}}
+function mathDefinition(word){const k=normalize(word);const defs={
+"convergence":"Comportamento em que uma sequência, série ou processo se aproxima de um limite segundo uma noção de convergência especificada.",
+"measure":"Em teoria da medida, uma função que atribui um tamanho a conjuntos e é contavelmente aditiva em uma sigma-álgebra.",
+"measurable":"Que é compatível com a estrutura de uma sigma-álgebra; por exemplo, uma função mensurável preserva a mensurabilidade das pré-imagens de conjuntos apropriados.",
+"almost surely":"Propriedade que ocorre com probabilidade 1, embora possa falhar em um conjunto de probabilidade zero.",
+"random variable":"Função mensurável que associa um valor numérico a cada resultado de um experimento aleatório.",
+"eigenvalue":"Escalar λ para o qual existe vetor não nulo v satisfazendo Av = λv.",
+"compact":"Espaço/conjunto que, em espaços métricos, pode ser caracterizado por ser completo e totalmente limitado; em geral, toda cobertura aberta admite subcobertura finita.",
+"bounded":"Que está contido entre duas cotas finitas (no contexto apropriado).",
+"injective":"Função em que entradas diferentes têm imagens diferentes.",
+"surjective":"Função cuja imagem coincide com o contradomínio.",
+"bijective":"Função simultaneamente injetiva e sobrejetiva; portanto possui inversa.",
+"martingale":"Processo estocástico em que, sob as condições usuais, a esperança condicional futura é igual ao valor atual.",
+"ergodic":"Propriedade de um sistema/processo que relaciona médias temporais e médias espaciais ou de conjunto, sob hipóteses apropriadas.",
+"orbit":"Conjunto de estados obtidos ao iterar uma aplicação ou seguir a evolução de um sistema a partir de uma condição inicial."
+};return defs[k]||null}
+function showResult(word,result,context){const saved=vocab.some(x=>normalize(x.term)===normalize(word));const def=mathDefinition(word);saveHistory(word,result.translation,context);$("drawerContent").innerHTML=`<div class="eyebrow">PALAVRA</div><div class="term">${esc(word)}</div>${result.math?'<span class="badge">📐 Termo matemático</span>':''}<div class="translation">🇧🇷 ${esc(result.translation)}</div>${def?`<div class="definition"><b>📐 No contexto matemático</b><br>${esc(def)}</div>`:""}<div class="context"><b>Contexto:</b><br>${highlightContext(context,word)}</div><div class="note">Fonte: ${esc(result.source)}</div><div class="actions"><button id="save" class="save ${saved?"saved":""}">${saved?"✓ Salva":"⭐ Salvar"}</button><button id="speak" class="speak">🔊 Ouvir</button><button id="explain" class="explain">💡 Explicar</button></div>`;wireWordActions(word,result,context)}
+function wireWordActions(word,result,context){$("save").onclick=()=>{if(!vocab.some(x=>normalize(x.term)===normalize(word))){vocab.push({term:word,translation:result.translation});localStorage.setItem("mathread_vocab_v5",JSON.stringify(vocab));$("save").textContent="✓ Salva";$("save").classList.add("saved");toast("Salvo no vocabulário ⭐")}};$("speak").onclick=()=>speakText(word);$("explain").onclick=()=>showExplanation(word,result.translation,context)}
+function showPhraseResult(text,result,context){const saved=vocab.some(x=>normalize(x.term)===normalize(text));const def=mathDefinition(text);saveHistory(text,result.translation,context);$("drawerContent").innerHTML=`<div class="eyebrow">FRASE SELECIONADA</div><div class="phrase">${esc(text)}</div>${result.math?'<span class="badge">📐 Expressão matemática</span>':''}<div class="translation">🇧🇷 ${esc(result.translation)}</div>${def?`<div class="definition"><b>📐 Leitura matemática</b><br>${esc(def)}</div>`:""}<div class="context"><b>Contexto:</b><br>${highlightContext(context,text)}</div><div class="note">A tradução de frases é feita pela expressão completa quando disponível; caso contrário, usa tradução automática.</div><div class="actions"><button id="savePhrase" class="save ${saved?"saved":""}">${saved?"✓ Salva":"⭐ Salvar frase"}</button><button id="speakPhrase" class="speak">🔊 Ouvir</button><button id="explainPhrase" class="explain">💡 Explicar</button></div>`;$("savePhrase").onclick=()=>{if(!vocab.some(x=>normalize(x.term)===normalize(text))){vocab.push({term:text,translation:result.translation,type:"phrase"});localStorage.setItem("mathread_vocab_v5",JSON.stringify(vocab));$("savePhrase").textContent="✓ Salva";$("savePhrase").classList.add("saved");toast("Frase salva no vocabulário ⭐")}};$("speakPhrase").onclick=()=>speakText(text);$("explainPhrase").onclick=()=>showPhraseExplanation(text,context)}
+function showExplanation(word,translation,context){const def=mathDefinition(word);$("drawerContent").innerHTML=`<div class="eyebrow">EXPLICAÇÃO</div><div class="term">${esc(word)}</div><div class="translation">🇧🇷 ${esc(translation)}</div>${def?`<div class="definition"><b>📐 Conceito matemático</b><br>${esc(def)}</div>`:`<div class="definition"><b>🧠 Como ler no artigo</b><br>Observe o que o termo modifica, quais hipóteses aparecem perto dele e qual objeto matemático está sendo discutido. O contexto é essencial para escolher a tradução correta.</div>`}<div class="context"><b>Trecho:</b><br>${highlightContext(context,word)}</div><button id="back" class="explain">← Voltar</button>`;$("back").onclick=()=>showResult(word,{translation,math:!!local(word),source:"glossário matemático"},context)}
+function showPhraseExplanation(text,context){const r=findGlossaryPhrase(text);$("drawer").classList.remove("hidden");$("drawerContent").innerHTML=`<div class="eyebrow">EXPLICAÇÃO DA FRASE</div><div class="phrase">${esc(text)}</div><div class="definition"><b>🧠 Como estudar</b><br>Leia a frase inteira antes de traduzir palavra por palavra. Identifique o objeto matemático, as hipóteses e a relação lógica (por exemplo: implica, se e somente se, existe, para todo).${r?.math?`<br><br><b>📐 Expressão reconhecida:</b> ${esc(r.translation)}`:""}</div><div class="context"><b>Contexto:</b><br>${esc(context)}</div><button id="backPhrase" class="explain">← Voltar</button>`;$("backPhrase").onclick=()=>handlePhrase(text,context)}
+function highlightContext(context,word){const re=new RegExp("("+String(word).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig");return esc(context).replace(re,"<b>$1</b>")}
+function speakText(text){if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-US";speechSynthesis.speak(u)}else toast("Seu navegador não oferece leitura em voz alta.")}
+function saveHistory(term,translation,context){history.unshift({term,translation,context,time:Date.now()});history=history.slice(0,30);localStorage.setItem("mathread_history_v5",JSON.stringify(history))}
 
-function showResult(word,result,context){const saved=vocab.some(x=>normalize(x.term)===normalize(word));$("drawerContent").innerHTML=`<div class="term">${esc(word)}</div>${result.math?'<span class="badge">📐 Termo matemático</span>':''}<div class="translation">🇧🇷 ${esc(result.translation)}</div><div class="context">${highlightContext(context,word)}</div><div class="note">Fonte: ${esc(result.source)}. Toque em ⭐ para guardar a palavra.</div><div class="actions"><button id="save" class="save ${saved?"saved":""}">${saved?"✓ Salva":"⭐ Salvar"}</button><button id="speak" class="speak">🔊 Ouvir</button><button id="explain" class="explain">💡 Explicar</button></div>`;
- $("save").onclick=()=>{if(!vocab.some(x=>normalize(x.term)===normalize(word))){vocab.push({term:word,translation:result.translation});localStorage.setItem("mathread_vocab_v3",JSON.stringify(vocab));$("save").textContent="✓ Salva";$("save").classList.add("saved");toast("Palavra salva no vocabulário")}};
- $("speak").onclick=()=>{if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(word);u.lang="en-US";speechSynthesis.speak(u)}};
- $("explain").onclick=()=>showExplanation(word,result.translation,context);
-}
-function highlightContext(context,word){const re=new RegExp("("+word.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig");return esc(context).replace(re,"<b>$1</b>")}
-function showExplanation(word,translation,context){$("drawerContent").innerHTML=`<div class="term">💡 ${esc(word)}</div><div class="translation">🇧🇷 ${esc(translation)}</div><div class="context">${highlightContext(context,word)}</div><div class="note">No MathRead V3, a tradução prioriza o glossário matemático quando há um significado técnico conhecido. Para uma explicação matemática mais profunda, a próxima evolução pode usar IA com o contexto completo do artigo.</div><button id="back" class="explain">← Voltar</button>`;$("back").onclick=()=>showResult(word,{translation,math:!!local(word),source:"glossário matemático"},context)}
+$(document).onselectionchange=selectedTextHandler;
+$("reader").addEventListener("touchend",()=>setTimeout(selectedTextHandler,120),{passive:true});
+$("prev").onclick=async()=>{if(page>1){page--;clearSelectionUI();await render()}};$('next').onclick=async()=>{if(page<pdf.numPages){page++;clearSelectionUI();await render()}};$('plus').onclick=async()=>{scale=Math.min(2.5,scale+.15);await render()};$('minus').onclick=async()=>{scale=Math.max(.6,scale-.15);await render()};$('close').onclick=()=>{$('drawer').classList.add('hidden');clearSelectionUI()};
+$("mode").onclick=()=>{readingMode=!readingMode;layer.classList.toggle("select-mode",!readingMode);$("mode").textContent=readingMode?"📖 Leitura":"✋ Selecionar frase";toast(readingMode?"Toque em uma palavra para traduzir":"Arraste/seleccione uma frase e toque em Traduzir")};
+$("vocab").onclick=()=>{$("drawer").classList.remove("hidden");if(!vocab.length){$("drawerContent").innerHTML='<div class="eyebrow">ESTUDO</div><h2>⭐ Vocabulário</h2><p class="empty">Você ainda não salvou nenhuma palavra ou frase.</p>';return}$("drawerContent").innerHTML='<div class="eyebrow">ESTUDO</div><h2>⭐ Vocabulário</h2>'+vocab.map((x,i)=>`<div class="vrow"><button class="remove" data-i="${i}">×</button><div class="vword">${esc(x.term)}</div><div class="vtrans">🇧🇷 ${esc(x.translation)}</div></div>`).join("");document.querySelectorAll(".remove").forEach(b=>b.onclick=()=>{vocab.splice(+b.dataset.i,1);localStorage.setItem("mathread_vocab_v5",JSON.stringify(vocab));$("vocab").click()})};
+$("history").onclick=()=>{$("drawer").classList.remove("hidden");if(!history.length){$("drawerContent").innerHTML='<div class="eyebrow">HISTÓRICO</div><h2>🕘 Histórico</h2><p class="empty">Nenhuma consulta ainda.</p>';return}$("drawerContent").innerHTML='<div class="eyebrow">HISTÓRICO</div><h2>🕘 Últimas consultas</h2>'+history.map(x=>`<div class="vrow historyRow"><div></div><div class="vword">${esc(x.term)}</div><div class="vtrans">🇧🇷 ${esc(x.translation)}</div></div>`).join("")};
+function toast(t){$("toast").textContent=t;$("toast").style.display="block";clearTimeout(window.__toast);window.__toast=setTimeout(()=>$("toast").style.display="none",2200)}
 
-$("prev").onclick=async()=>{if(page>1){page--;await render()}};$("next").onclick=async()=>{if(page<pdf.numPages){page++;await render()}};$("plus").onclick=async()=>{scale=Math.min(2.5,scale+.15);await render()};$("minus").onclick=async()=>{scale=Math.max(.6,scale-.15);await render()};$("close").onclick=()=>$("drawer").classList.add("hidden");
-$("mode").onclick=()=>{readingMode=!readingMode;layer.classList.toggle("select-mode",!readingMode);$("mode").textContent=readingMode?"📖 Leitura":"✋ Seleção";toast(readingMode?"Toque para traduzir":"Modo seleção ativado")};
-$("vocab").onclick=()=>{$("drawer").classList.remove("hidden");if(!vocab.length){$("drawerContent").innerHTML='<h2>⭐ Vocabulário</h2><p class="empty">Você ainda não salvou nenhuma palavra.</p>';return}$("drawerContent").innerHTML='<h2>⭐ Vocabulário</h2>'+vocab.map((x,i)=>`<div class="vrow"><button class="remove" data-i="${i}">×</button><div class="vword">${esc(x.term)}</div><div class="vtrans">🇧🇷 ${esc(x.translation)}</div></div>`).join("");document.querySelectorAll(".remove").forEach(b=>b.onclick=()=>{vocab.splice(+b.dataset.i,1);localStorage.setItem("mathread_vocab_v3",JSON.stringify(vocab));$("vocab").click()})};
-function toast(t){$("toast").textContent=t;$("toast").style.display="block";clearTimeout(window.__toast);window.__toast=setTimeout(()=>$("toast").style.display="none",1800)}
+if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{});}

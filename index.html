@@ -4,40 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
-<title>MathRead V3</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MathRead V5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <div><div class="brand">Math<span>Read</span> <small>V3</small></div><div class="tagline">Inglês matemático, toque e entenda.</div></div>
-  <button id="vocab" class="iconBtn">⭐ <span>Vocabulário</span></button>
-</header>
-<nav class="toolbar">
-  <label class="upload">📄 <span>Abrir PDF</span><input id="pdfInput" type="file" accept="application/pdf"></label>
-  <div class="navgroup"><button id="prev" disabled>‹</button><span id="pageInfo">— / —</span><button id="next" disabled>›</button></div>
-  <div class="navgroup"><button id="minus" disabled>−</button><span id="zoom">100%</span><button id="plus" disabled>+</button></div>
-  <button id="mode" class="modeBtn">📖 Leitura</button>
-</nav>
-<main>
-<section id="welcome" class="welcome">
-  <div class="logo">∑</div>
-  <h1>Toque em qualquer palavra.</h1>
-  <p>O MathRead identifica a palavra diretamente no artigo e mostra a tradução em português sem precisar selecionar o texto.</p>
-  <div class="featureGrid">
-    <div>👆<b>Toque</b><span>tradução imediata</span></div>
-    <div>📐<b>Matemática</b><span>vocabulário técnico priorizado</span></div>
-    <div>🧠<b>Contexto</b><span>expressões e frases matemáticas</span></div>
-    <div>⭐<b>Aprenda</b><span>salve palavras para revisar</span></div>
-  </div>
-  <p class="small">Abra um artigo PDF para começar.</p>
-</section>
-<section id="reader" class="reader hidden">
-  <div id="pageWrap" class="page-wrap"><canvas id="canvas"></canvas><div id="textLayer" class="text-layer"></div></div>
-</section>
-</main>
-<aside id="drawer" class="drawer hidden"><button id="close" class="close">×</button><div id="drawerContent"></div></aside>
-<div id="toast"></div>
+<header class="topbar"><div><div class="brand">Math<span>Read</span> <small>V5</small></div><div class="tagline">Leia. Toque. Traduza. Entenda.</div></div><div class="topActions"><button id="history" class="iconBtn">🕘</button><button id="vocab" class="iconBtn">⭐ <span>Vocabulário</span></button></div></header>
+<nav class="toolbar"><label class="upload">📄 <span>Abrir PDF</span><input id="pdfInput" type="file" accept="application/pdf"></label><div class="navgroup"><button id="prev" disabled>‹</button><span id="pageInfo">— / —</span><button id="next" disabled>›</button></div><div class="navgroup"><button id="minus" disabled>−</button><span id="zoom">100%</span><button id="plus" disabled>+</button></div><button id="mode" class="modeBtn">📖 Leitura</button></nav>
+<main><section id="welcome" class="welcome"><div class="logo">∑</div><h1>Seu artigo. Seu dicionário matemático.</h1><p><b>Toque</b> em uma palavra para traduzir. Ative <b>Selecionar frase</b> para traduzir expressões e frases inteiras.</p><div class="featureGrid"><div>👆<b>Toque</b><span>tradução imediata</span></div><div>✍️<b>Frases</b><span>selecione trechos inteiros</span></div><div>📐<b>Matemática</b><span>glossário técnico ampliado, com foco especial em probabilidade</span></div><div>🧠<b>Entenda</b><span>contexto + conceito</span></div><div>🔊<b>Pronúncia</b><span>ouça em inglês</span></div><div>⭐<b>Vocabulário</b><span>guarde palavras e frases</span></div></div><div class="plusBox"><b>✨ V5 Plus</b><br>Histórico de consultas, explicações matemáticas, PWA para instalar no iPad e armazenamento local do seu vocabulário.</div><p class="small">Abra um artigo PDF para começar.</p></section><section id="reader" class="reader hidden"><div id="pageWrap" class="page-wrap"><canvas id="canvas"></canvas><div id="textLayer" class="text-layer"></div></div></section></main>
+<div id="selectionBar" class="selectionBar hidden"><div><b>Selecionado:</b><span id="selectedPreview"></span></div><div class="selectionActions"><button id="translateSelection">🇧🇷 Traduzir frase</button><button id="explainSelection">💡 Entender</button></div></div>
+<aside id="drawer" class="drawer hidden"><button id="close" class="close">×</button><div id="drawerContent"></div></aside><div id="toast"></div>
 <script type="module" src="app.js"></script>
-</body>
-</html>
+</body></html>
