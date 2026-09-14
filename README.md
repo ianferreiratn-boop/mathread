@@ -1,36 +1,21 @@
-# MathRead V2
+# MathRead V3
 
-## O que mudou na V2
-- O PDF agora recebe uma camada de texto real sobre a página.
-- É possível selecionar texto com o mouse/toque em PDFs com texto pesquisável.
-- Glossário local com termos matemáticos/probabilidade.
-- O glossário tem prioridade sobre tradução genérica para termos reconhecidos.
-- Vocabulário salvo no navegador.
-- Zoom, navegação e interface responsiva para celular.
+Leitor de artigos matemáticos em inglês inspirado no fluxo de leitura do EWA: **toque em uma palavra para obter a tradução**.
 
-## Como rodar
-### VS Code
-1. Extraia o ZIP.
-2. Abra a pasta no VS Code.
-3. Instale a extensão Live Server.
-4. Botão direito em `index.html` → Open with Live Server.
+## Principais mudanças
+- Toque direto em palavras do PDF, sem precisar selecionar texto.
+- Glossário matemático local amplo, priorizando traduções técnicas.
+- Reconhecimento de expressões matemáticas de várias palavras.
+- Fallback para tradução online EN → PT-BR quando o termo não estiver no glossário.
+- Exibição de contexto da palavra no trecho do artigo.
+- Botão de pronúncia em inglês usando a fala do navegador.
+- Salvar palavras no vocabulário.
+- Modo de leitura/seleção para copiar texto quando necessário.
+- Interface responsiva para iPad/iPhone.
+- PWA manifest para facilitar a instalação na tela inicial.
 
-### Python
-Na pasta:
-`python -m http.server 8000`
+## Publicação no GitHub Pages
+Substitua os arquivos da V2 pelos arquivos desta pasta e mantenha `main` + `/(root)` em Settings → Pages.
 
-Abra `http://localhost:8000`.
-
-## Internet
-A leitura do PDF e o vocabulário local funcionam no navegador. A tradução genérica usa MyMemory, então traduções que não estiverem no glossário precisam de internet.
-
-## Limitação conhecida
-PDFs escaneados como imagem não têm camada de texto. Para esses casos, a próxima versão pode incluir OCR.
-
-## Ideia para V3
-- OCR para PDFs escaneados.
-- Tradução contextual por IA.
-- Explicação matemática do trecho selecionado.
-- Glossário maior por área (Análise, Álgebra, Probabilidade, Estatística etc.).
-- PWA instalável no celular.
-- Conta/sincronização entre dispositivos.
+## Observação
+PDFs escaneados como imagem não possuem camada de texto. Para esses arquivos, uma V4 pode adicionar OCR.

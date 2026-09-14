@@ -3,119 +3,56 @@ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/p
 
 const $=id=>document.getElementById(id);
 const canvas=$("canvas"),ctx=canvas.getContext("2d"),layer=$("textLayer"),wrap=$("pageWrap");
-let pdf=null,page=1,scale=1.25,selected="",vocab=JSON.parse(localStorage.getItem("mathread_vocab_v2")||"[]");
+let pdf=null,page=1,scale=1.25,readingMode=true,currentTextItems=[],currentToken=null;
+let vocab=JSON.parse(localStorage.getItem("mathread_vocab_v3")||"[]");
 
-const mathDict={
- "almost surely":"quase certamente","random variable":"variável aleatória","random variables":"variáveis aleatórias",
- "sample space":"espaço amostral","probability measure":"medida de probabilidade","probability space":"espaço de probabilidade",
- "measurable":"mensurável","measurability":"mensurabilidade","convergence":"convergência","converges":"converge",
- "convergent":"convergente","diverges":"diverge","divergence":"divergência","bounded":"limitado(a)",
- "unbounded":"ilimitado(a)","sequence":"sequência","subsequence":"subsequência","limit":"limite",
- "continuous":"contínua","continuity":"continuidade","differentiable":"diferenciável","derivative":"derivada",
- "integrable":"integrável","integral":"integral","function":"função","mapping":"aplicação",
- "set":"conjunto","subset":"subconjunto","empty set":"conjunto vazio","field":"corpo","ring":"anel",
- "group":"grupo","vector space":"espaço vetorial","inner product":"produto interno","norm":"norma",
- "metric space":"espaço métrico","open set":"conjunto aberto","closed set":"conjunto fechado",
- "compact":"compacto","compactness":"compacidade","topology":"topologia","measure":"medida",
- "support":"suporte","almost everywhere":"quase em todo lugar","with probability one":"com probabilidade um",
- "expectation":"esperança","expected value":"valor esperado","variance":"variância","covariance":"covariância",
- "independent":"independente","independence":"independência","distribution":"distribuição",
- "density":"densidade","random":"aleatório(a)","correlation":"correlação","entropy":"entropia",
- "theorem":"teorema","lemma":"lema","proposition":"proposição","proof":"demonstração",
- "assume":"suponha","hence":"portanto","therefore":"portanto","thus":"assim","if and only if":"se, e somente se"
+// Glossário inicial amplo de inglês matemático. Expressões mais longas são consultadas antes de palavras isoladas.
+const D={
+"a.e.":"q.c. / quase certamente", "a.s.":"q.c. / quase certamente", "almost surely":"quase certamente", "almost everywhere":"quase em todo lugar", "with probability one":"com probabilidade um", "in probability":"em probabilidade", "in distribution":"em distribuição", "in law":"em distribuição", "law of large numbers":"lei dos grandes números", "central limit theorem":"teorema central do limite", "random variable":"variável aleatória", "random variables":"variáveis aleatórias", "random vector":"vetor aleatório", "random process":"processo aleatório", "random dynamical system":"sistema dinâmico aleatório", "stochastic process":"processo estocástico", "sample space":"espaço amostral", "probability space":"espaço de probabilidade", "probability measure":"medida de probabilidade", "conditional probability":"probabilidade condicional", "conditional expectation":"esperança condicional", "conditional distribution":"distribuição condicional", "independent and identically distributed":"independentes e identicamente distribuídas", "independent identically distributed":"independentes e identicamente distribuídas", "expected value":"valor esperado", "expectation":"esperança", "variance":"variância", "standard deviation":"desvio-padrão", "covariance":"covariância", "correlation coefficient":"coeficiente de correlação", "probability density":"densidade de probabilidade", "probability distribution":"distribuição de probabilidade", "cumulative distribution function":"função de distribuição acumulada", "probability mass function":"função de massa de probabilidade", "moment generating function":"função geradora de momentos", "characteristic function":"função característica", "almost everywhere":"quase em todo lugar", "measurable space":"espaço mensurável", "measurable function":"função mensurável", "measurable set":"conjunto mensurável", "sigma algebra":"sigma-álgebra", "sigma-algebra":"sigma-álgebra", "borel set":"conjunto de Borel", "borel measurable":"mensurável de Borel", "lebesgue measure":"medida de Lebesgue", "measure zero":"medida zero", "null set":"conjunto nulo",
+"convergence in probability":"convergência em probabilidade", "almost sure convergence":"convergência quase certa", "convergence in distribution":"convergência em distribuição", "uniform convergence":"convergência uniforme", "pointwise convergence":"convergência pontual", "absolute convergence":"convergência absoluta", "conditional convergence":"convergência condicional", "converges":"converge", "convergent":"convergente", "convergence":"convergência", "diverges":"diverge", "divergent":"divergente", "divergence":"divergência", "sequence":"sequência", "subsequence":"subsequência", "series":"série", "power series":"série de potências", "telescoping series":"série telescópica", "limit":"limite", "limiting":"limite / tendendo", "bounded":"limitado(a)", "unbounded":"ilimitado(a)", "upper bound":"cota superior", "lower bound":"cota inferior", "least upper bound":"menor cota superior", "greatest lower bound":"maior cota inferior", "supremum":"supremo", "infimum":"ínfimo",
+"continuous":"contínuo(a)", "continuity":"continuidade", "uniformly continuous":"uniformemente contínuo(a)", "differentiable":"diferenciável", "differentiability":"diferenciabilidade", "derivative":"derivada", "partial derivative":"derivada parcial", "directional derivative":"derivada direcional", "gradient":"gradiente", "jacobian":"jacobiana", "hessian":"hessiana", "integrable":"integrável", "integrability":"integrabilidade", "integral":"integral", "definite integral":"integral definida", "indefinite integral":"integral indefinida", "antiderivative":"primitiva", "fundamental theorem of calculus":"teorema fundamental do cálculo", "mean value theorem":"teorema do valor médio", "intermediate value theorem":"teorema do valor intermediário", "function":"função", "mapping":"aplicação", "map":"aplicação", "domain":"domínio", "codomain":"contradomínio", "range":"imagem", "image":"imagem", "preimage":"imagem inversa", "inverse function":"função inversa", "composition":"composição", "injective":"injetiva", "surjective":"sobrejetiva", "bijective":"bijetiva",
+"set":"conjunto", "sets":"conjuntos", "subset":"subconjunto", "proper subset":"subconjunto próprio", "empty set":"conjunto vazio", "universal set":"conjunto universo", "union":"união", "intersection":"interseção", "complement":"complemento", "cartesian product":"produto cartesiano", "power set":"conjunto das partes", "cardinality":"cardinalidade", "finite":"finito(a)", "infinite":"infinito(a)", "countable":"enumerável", "uncountable":"não enumerável", "equivalence relation":"relação de equivalência", "equivalence class":"classe de equivalência", "partition":"partição", "relation":"relação", "element":"elemento", "belongs to":"pertence a",
+"group":"grupo", "abelian group":"grupo abeliano", "commutative group":"grupo comutativo", "subgroup":"subgrupo", "normal subgroup":"subgrupo normal", "quotient group":"grupo quociente", "cyclic group":"grupo cíclico", "group homomorphism":"homomorfismo de grupos", "group isomorphism":"isomorfismo de grupos", "kernel":"núcleo", "image":"imagem", "coset":"classe lateral", "left coset":"classe lateral à esquerda", "right coset":"classe lateral à direita", "order of an element":"ordem de um elemento", "finite group":"grupo finito", "ring":"anel", "commutative ring":"anel comutativo", "integral domain":"domínio de integridade", "field":"corpo", "subfield":"subcorpo", "polynomial ring":"anel de polinômios", "ideal":"ideal", "principal ideal":"ideal principal", "quotient ring":"anel quociente", "field extension":"extensão de corpos", "vector space":"espaço vetorial", "subspace":"subespaço", "linear combination":"combinação linear", "linear independence":"independência linear", "linearly independent":"linearmente independente", "basis":"base", "dimension":"dimensão", "span":"espaço gerado", "linear transformation":"transformação linear", "linear operator":"operador linear", "eigenvalue":"autovalor", "eigenvector":"autovetor", "eigenspace":"autoespaço", "characteristic polynomial":"polinômio característico", "minimal polynomial":"polinômio minimal", "inner product":"produto interno", "inner product space":"espaço com produto interno", "orthogonal":"ortogonal", "orthonormal":"ortonormal", "norm":"norma", "normed space":"espaço normado", "banach space":"espaço de Banach", "hilbert space":"espaço de Hilbert", "matrix":"matriz", "determinant":"determinante", "trace":"traço", "rank":"posto", "null space":"núcleo", "inverse matrix":"matriz inversa", "transpose":"transposta", "symmetric matrix":"matriz simétrica", "positive definite":"definida positiva",
+"metric space":"espaço métrico", "metric":"métrica", "distance":"distância", "open set":"conjunto aberto", "closed set":"conjunto fechado", "neighborhood":"vizinhança", "interior":"interior", "closure":"fecho", "boundary":"fronteira", "compact":"compacto(a)", "compactness":"compacidade", "connected":"conexo(a)", "connectedness":"conexidade", "path connected":"conexo por caminhos", "topological space":"espaço topológico", "topology":"topologia", "homeomorphism":"homeomorfismo", "homeomorphic":"homeomorfo(a)", "continuous map":"aplicação contínua", "open cover":"cobertura aberta", "finite subcover":"subcobertura finita", "complete":"completo(a)", "completeness":"completude", "cauchy sequence":"sequência de Cauchy", "dense":"denso(a)", "separable":"separável",
+"theorem":"teorema", "lemma":"lema", "proposition":"proposição", "corollary":"corolário", "conjecture":"conjectura", "proof":"demonstração", "proof by contradiction":"demonstração por contradição", "direct proof":"demonstração direta", "counterexample":"contraexemplo", "assumption":"hipótese", "hypothesis":"hipótese", "claim":"afirmação", "statement":"enunciado", "remark":"observação", "definition":"definição", "example":"exemplo", "suppose":"suponha", "assume":"suponha", "let":"seja", "hence":"portanto", "therefore":"portanto", "thus":"assim", "consequently":"consequentemente", "it follows that":"segue que", "if and only if":"se, e somente se", "if and only if":"se, e somente se", "such that":"tal que", "for all":"para todo", "there exists":"existe", "there exist":"existem", "without loss of generality":"sem perda de generalidade", "wlog":"sem perda de generalidade", "respectively":"respectivamente", "namely":"a saber", "whereas":"enquanto que", "denote":"denote", "denoted by":"denotado por",
+"algorithm":"algoritmo", "complexity":"complexidade", "computational complexity":"complexidade computacional", "graph":"grafo", "vertex":"vértice", "vertices":"vértices", "edge":"aresta", "edges":"arestas", "path":"caminho", "cycle":"ciclo", "connected graph":"grafo conexo", "directed graph":"grafo orientado", "undirected graph":"grafo não orientado", "tree":"árvore", "spanning tree":"árvore geradora", "degree":"grau", "adjacency matrix":"matriz de adjacência", "combinatorics":"combinatória", "permutation":"permutação", "combination":"combinação", "binomial coefficient":"coeficiente binomial", "pigeonhole principle":"princípio da casa dos pombos", "inclusion-exclusion principle":"princípio da inclusão-exclusão", "recurrence relation":"relação de recorrência", "generating function":"função geradora",
+"real number":"número real", "integer":"inteiro", "natural number":"número natural", "rational number":"número racional", "irrational number":"número irracional", "complex number":"número complexo", "real line":"reta real", "real-valued":"a valores reais", "integer-valued":"a valores inteiros", "positive":"positivo(a)", "negative":"negativo(a)", "nonnegative":"não negativo(a)", "nonzero":"não nulo", "strictly positive":"estritamente positivo", "absolute value":"valor absoluto", "square root":"raiz quadrada", "logarithm":"logaritmo", "exponential":"exponencial", "polynomial":"polinômio", "degree of a polynomial":"grau de um polinômio", "coefficient":"coeficiente", "root":"raiz", "zero of a function":"zero de uma função", "factorization":"fatoração", "inequality":"desigualdade", "equality":"igualdade", "equation":"equação", "identity":"identidade",
+"random":"aleatório(a)", "stochastic":"estocástico(a)", "correlation":"correlação", "entropy":"entropia", "dimension":"dimensão", "correlation dimension":"dimensão de correlação", "renyi entropy":"entropia de Rényi", "mixing":"mistura", "mixing rate":"taxa de mistura", "ergodic":"ergódico(a)", "ergodicity":"ergodicidade", "invariant measure":"medida invariante", "stationary":"estacionário(a)", "stationarity":"estacionariedade", "markov chain":"cadeia de Markov", "transition probability":"probabilidade de transição", "transition matrix":"matriz de transição", "martingale":"martingal", "filtration":"filtração", "stopping time":"tempo de parada", "brownian motion":"movimento browniano", "stochastic differential equation":"equação diferencial estocástica",
+"partial differential equation":"equação diferencial parcial", "ordinary differential equation":"equação diferencial ordinária", "differential equation":"equação diferencial", "initial condition":"condição inicial", "boundary condition":"condição de contorno", "initial value problem":"problema de valor inicial", "boundary value problem":"problema de contorno", "solution":"solução", "unique solution":"solução única", "existence and uniqueness":"existência e unicidade", "stability":"estabilidade", "stable":"estável", "unstable":"instável", "fixed point":"ponto fixo", "equilibrium":"equilíbrio", "dynamical system":"sistema dinâmico", "orbit":"órbita", "periodic orbit":"órbita periódica", "trajectory":"trajetória", "attractor":"atrator", "invariant":"invariante", "chaotic":"caótico(a)", "chaos":"caos",
+"optimization":"otimização", "objective function":"função objetivo", "constraint":"restrição", "constrained optimization":"otimização com restrições", "unconstrained optimization":"otimização sem restrições", "local minimum":"mínimo local", "local maximum":"máximo local", "global minimum":"mínimo global", "global maximum":"máximo global", "convex":"convexo(a)", "convexity":"convexidade", "concave":"côncavo(a)", "gradient descent":"descida do gradiente", "critical point":"ponto crítico", "saddle point":"ponto de sela",
+"measure":"medida", "measurable":"mensurável", "support":"suporte", "density":"densidade", "weak convergence":"convergência fraca", "weak derivative":"derivada fraca", "distributional derivative":"derivada no sentido das distribuições", "almost everywhere":"quase em todo lugar", "essential supremum":"supremo essencial", "essential infimum":"ínfimo essencial",
+"nearly":"quase", "approximately":"aproximadamente", "sufficiently":"suficientemente", "arbitrary":"arbitrário(a)", "unique":"único(a)", "existence":"existência", "uniqueness":"unicidade", "necessary":"necessário(a)", "sufficient":"suficiente", "equivalent":"equivalente", "equivalence":"equivalência", "implies":"implica", "implied":"implicado(a)", "holds":"vale", "valid":"válido(a)", "finite":"finito(a)", "infinite":"infinito(a)", "where":"onde", "over":"sobre", "throughout":"ao longo de", "respectively":"respectivamente", "particular":"particular", "arbitrarily":"arbitrariamente", "eventually":"eventualmente", "otherwise":"caso contrário", "indeed":"de fato", "clearly":"claramente", "obviously":"obviamente", "similarly":"similarmente", "analogously":"analogamente", "straightforward":"direto(a)", "trivial":"trivial", "nontrivial":"não trivial", "standard":"padrão", "classical":"clássico(a)", "natural":"natural", "canonical":"canônico(a)", "generic":"genérico(a)", "specific":"específico(a)", "finite-dimensional":"de dimensão finita", "infinite-dimensional":"de dimensão infinita"
 };
 
-$("pdfInput").onchange=async e=>{
- const f=e.target.files[0];if(!f)return;
- try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;page=1;
- $("welcome").classList.add("hidden");$("reader").classList.remove("hidden");
- ["prev","next","minus","plus"].forEach(x=>$(x).disabled=false);await render();toast("PDF aberto com sucesso.");
- }catch(err){console.error(err);toast("Não foi possível abrir este PDF.")}
-};
+const normalize=s=>s.toLowerCase().replace(/[“”‘’]/g,"'").replace(/\s+/g," ").trim();
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
+function local(text){const t=normalize(text);if(D[t])return {translation:D[t],math:true};return null}
 
-async function render(){
- const p=await pdf.getPage(page),vp=p.getViewport({scale});
- canvas.width=vp.width;canvas.height=vp.height;wrap.style.width=vp.width+"px";wrap.style.height=vp.height+"px";
- await p.render({canvasContext:ctx,viewport:vp}).promise;
- await renderText(p,vp);
- $("pageInfo").textContent=`${page} / ${pdf.numPages}`;$("zoom").textContent=Math.round(scale/1.25*100)+"%";
- window.getSelection()?.removeAllRanges();
-}
-async function renderText(p,vp){
- layer.innerHTML="";
- const tc=await p.getTextContent();
- for(const item of tc.items){
-   if(!item.str)continue;
-   const tx=pdfjsLib.Util.transform(vp.transform,item.transform);
-   const span=document.createElement("span");span.textContent=item.str;
-   const fontSize=Math.hypot(tx[2],tx[3]);
-   span.style.left=tx[4]+"px";span.style.top=(tx[5]-fontSize)+"px";
-   span.style.fontSize=fontSize+"px";
-   span.style.fontFamily=item.fontName||"sans-serif";
-   span.style.width=(item.width*vp.scale)+"px";
-   span.style.height=Math.max(fontSize*1.2,8)+"px";
-   layer.appendChild(span);
- }
-}
-$("prev").onclick=async()=>{if(page>1){page--;await render()}};
-$("next").onclick=async()=>{if(page<pdf.numPages){page++;await render()}};
-$("plus").onclick=async()=>{scale=Math.min(2.5,scale+.15);await render()};
-$("minus").onclick=async()=>{scale=Math.max(.6,scale-.15);await render()};
-$("close").onclick=()=>$("drawer").classList.add("hidden");
+$("pdfInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;page=1;$("welcome").classList.add("hidden");$("reader").classList.remove("hidden");["prev","next","minus","plus"].forEach(x=>$(x).disabled=false);await render();toast("PDF aberto. Agora toque em uma palavra.")}catch(err){console.error(err);toast("Não foi possível abrir este PDF.")}};
 
-document.addEventListener("mouseup",()=>{
- const s=window.getSelection()?.toString().trim();
- if(!s||s.length>100)return;
- if(!layer.contains(window.getSelection().anchorNode))return;
- selected=s;
- showTranslation(s);
-});
+async function render(){const p=await pdf.getPage(page),vp=p.getViewport({scale});canvas.width=vp.width;canvas.height=vp.height;wrap.style.width=vp.width+"px";wrap.style.height=vp.height+"px";await p.render({canvasContext:ctx,viewport:vp}).promise;await renderText(p,vp);$("pageInfo").textContent=`${page} / ${pdf.numPages}`;$("zoom").textContent=Math.round(scale/1.25*100)+"%";window.getSelection()?.removeAllRanges()}
 
-function localTranslation(text){
- const t=text.toLowerCase().replace(/\s+/g," ").trim();
- if(mathDict[t])return {translation:mathDict[t],math:true};
- const words=t.split(" ");
- for(let n=Math.min(4,words.length);n>=1;n--){
-   for(let i=0;i+n<=words.length;i++){
-     const phrase=words.slice(i,i+n).join(" ");
-     if(mathDict[phrase])return {translation:mathDict[phrase],math:true};
-   }
- }
- return null;
+async function renderText(p,vp){layer.innerHTML="";currentTextItems=[];const tc=await p.getTextContent();
+ for(const item of tc.items){if(!item.str?.trim())continue;const tx=pdfjsLib.Util.transform(vp.transform,item.transform);const fontSize=Math.max(6,Math.hypot(tx[2],tx[3]));const box=document.createElement("span");box.className="text-item";box.style.left=tx[4]+"px";box.style.top=(tx[5]-fontSize)+"px";box.style.fontSize=fontSize+"px";box.style.fontFamily=item.fontName||"sans-serif";box.style.width=Math.max(item.width*vp.scale,1)+"px";box.style.height=Math.max(fontSize*1.35,8)+"px";
+   const parts=item.str.split(/(\s+|[.,;:!?()\[\]{}])/);let wordIndex=0;for(const part of parts){if(!part)continue;const s=document.createElement("span");if(/\s+/.test(part)||/^[.,;:!?()\[\]{}]$/.test(part)){s.textContent=part}else{wordIndex++;s.textContent=part;s.className="token";s.dataset.word=part;s.dataset.index=wordIndex;s.addEventListener("click",ev=>{ev.preventDefault();ev.stopPropagation();handleToken(s,part,box)});s.addEventListener("touchend",ev=>{ev.preventDefault();ev.stopPropagation();handleToken(s,part,box)},{passive:false})}box.appendChild(s)}layer.appendChild(box);currentTextItems.push({str:item.str,box})}
 }
 
-async function showTranslation(text){
- $("drawer").classList.remove("hidden");
- $("drawerContent").innerHTML=`<div class="term">${esc(text)}</div><div>🔎 Consultando…</div>`;
- let result=localTranslation(text), translation=result?.translation;
- if(!translation){
-   try{
-    const r=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|pt-BR`);
-    const d=await r.json();translation=d?.responseData?.translatedText||"Tradução não encontrada.";
-   }catch(e){translation="Sem conexão para consultar a tradução."}
- }
- const saved=vocab.some(x=>x.term.toLowerCase()===text.toLowerCase());
- $("drawerContent").innerHTML=`
-   <div class="term">${esc(text)}</div>
-   ${result?.math?'<span class="badge">📐 Termo matemático</span>':''}
-   <div class="translation">🇧🇷 ${esc(translation)}</div>
-   <div class="note">${result?.math?"Usei um glossário matemático local para priorizar o significado técnico.":"Tradução automática. Termos técnicos podem ter significados diferentes conforme o contexto."}</div>
-   <button id="save" class="save ${saved?"saved":""}">${saved?"✓ Salva no vocabulário":"⭐ Salvar no vocabulário"}</button>`;
- $("save").onclick=()=>{
-   if(!vocab.some(x=>x.term.toLowerCase()===text.toLowerCase())){
-    vocab.push({term:text,translation});localStorage.setItem("mathread_vocab_v2",JSON.stringify(vocab));
-    $("save").textContent="✓ Salva no vocabulário";$("save").classList.add("saved");
-   }
- };
+async function handleToken(el,word,box){currentToken=el;const clean=word.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+|[^A-Za-zÀ-ÖØ-öø-ÿ]+$/g,"");if(!clean)return;const ctxText=getContext(box,clean);showLoading(clean,ctxText);const result=await translateSmart(clean,ctxText);showResult(clean,result,ctxText)}
+function getContext(box,word){let sentence=box.textContent||"";const idx=sentence.toLowerCase().indexOf(word.toLowerCase());if(idx<0)return sentence;let start=idx,end=idx+word.length;while(start>0&&!/[.!?]/.test(sentence[start-1]))start--;while(end<sentence.length&&!/[.!?]/.test(sentence[end]))end++;return sentence.slice(start,end).trim().replace(/\s+/g," ")}
+
+function showLoading(word,context){$("drawer").classList.remove("hidden");$("drawerContent").innerHTML=`<div class="term">${esc(word)}</div><div class="loading">⚡ Procurando a tradução…</div>`}
+async function translateSmart(word,context){let r=local(word);if(r)return {...r,source:"glossário matemático"};const phraseCandidates=[];const words=normalize(context).split(/\s+/);const idx=words.findIndex(x=>x.replace(/[^a-z-]/g,"")===normalize(word).replace(/[^a-z-]/g,""));for(let n=5;n>=2;n--){if(idx>=0){for(let start=Math.max(0,idx-n+1);start<=Math.min(idx,words.length-n);start++){const ph=words.slice(start,start+n).join(" ");if(D[ph])return {translation:D[ph],math:true,source:"expressão matemática"};phraseCandidates.push(ph)}}}
+ try{const q=encodeURIComponent(word);const res=await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=en|pt-BR`);const data=await res.json();const tr=data?.responseData?.translatedText;if(tr)return {translation:tr,math:false,source:"tradução automática"}}catch(e){}return {translation:"Tradução não encontrada.",math:false,source:"indisponível"}}
+
+function showResult(word,result,context){const saved=vocab.some(x=>normalize(x.term)===normalize(word));$("drawerContent").innerHTML=`<div class="term">${esc(word)}</div>${result.math?'<span class="badge">📐 Termo matemático</span>':''}<div class="translation">🇧🇷 ${esc(result.translation)}</div><div class="context">${highlightContext(context,word)}</div><div class="note">Fonte: ${esc(result.source)}. Toque em ⭐ para guardar a palavra.</div><div class="actions"><button id="save" class="save ${saved?"saved":""}">${saved?"✓ Salva":"⭐ Salvar"}</button><button id="speak" class="speak">🔊 Ouvir</button><button id="explain" class="explain">💡 Explicar</button></div>`;
+ $("save").onclick=()=>{if(!vocab.some(x=>normalize(x.term)===normalize(word))){vocab.push({term:word,translation:result.translation});localStorage.setItem("mathread_vocab_v3",JSON.stringify(vocab));$("save").textContent="✓ Salva";$("save").classList.add("saved");toast("Palavra salva no vocabulário")}};
+ $("speak").onclick=()=>{if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(word);u.lang="en-US";speechSynthesis.speak(u)}};
+ $("explain").onclick=()=>showExplanation(word,result.translation,context);
 }
+function highlightContext(context,word){const re=new RegExp("("+word.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig");return esc(context).replace(re,"<b>$1</b>")}
+function showExplanation(word,translation,context){$("drawerContent").innerHTML=`<div class="term">💡 ${esc(word)}</div><div class="translation">🇧🇷 ${esc(translation)}</div><div class="context">${highlightContext(context,word)}</div><div class="note">No MathRead V3, a tradução prioriza o glossário matemático quando há um significado técnico conhecido. Para uma explicação matemática mais profunda, a próxima evolução pode usar IA com o contexto completo do artigo.</div><button id="back" class="explain">← Voltar</button>`;$("back").onclick=()=>showResult(word,{translation,math:!!local(word),source:"glossário matemático"},context)}
 
-$("vocab").onclick=()=>{
- $("drawer").classList.remove("hidden");
- if(!vocab.length){$("drawerContent").innerHTML="<h2>⭐ Vocabulário</h2><p class='note'>Você ainda não salvou nenhuma palavra.</p>";return}
- $("drawerContent").innerHTML="<h2>⭐ Vocabulário</h2>"+vocab.map((x,i)=>`
- <div class="vrow"><button class="remove" data-i="${i}">×</button><div class="vword">${esc(x.term)}</div><div class="vtrans">🇧🇷 ${esc(x.translation)}</div></div>`).join("");
- document.querySelectorAll(".remove").forEach(b=>b.onclick=()=>{vocab.splice(+b.dataset.i,1);localStorage.setItem("mathread_vocab_v2",JSON.stringify(vocab));$("vocab").click()});
-};
-
-function esc(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-function toast(t){$("toast").textContent=t;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",1800)}
+$("prev").onclick=async()=>{if(page>1){page--;await render()}};$("next").onclick=async()=>{if(page<pdf.numPages){page++;await render()}};$("plus").onclick=async()=>{scale=Math.min(2.5,scale+.15);await render()};$("minus").onclick=async()=>{scale=Math.max(.6,scale-.15);await render()};$("close").onclick=()=>$("drawer").classList.add("hidden");
+$("mode").onclick=()=>{readingMode=!readingMode;layer.classList.toggle("select-mode",!readingMode);$("mode").textContent=readingMode?"📖 Leitura":"✋ Seleção";toast(readingMode?"Toque para traduzir":"Modo seleção ativado")};
+$("vocab").onclick=()=>{$("drawer").classList.remove("hidden");if(!vocab.length){$("drawerContent").innerHTML='<h2>⭐ Vocabulário</h2><p class="empty">Você ainda não salvou nenhuma palavra.</p>';return}$("drawerContent").innerHTML='<h2>⭐ Vocabulário</h2>'+vocab.map((x,i)=>`<div class="vrow"><button class="remove" data-i="${i}">×</button><div class="vword">${esc(x.term)}</div><div class="vtrans">🇧🇷 ${esc(x.translation)}</div></div>`).join("");document.querySelectorAll(".remove").forEach(b=>b.onclick=()=>{vocab.splice(+b.dataset.i,1);localStorage.setItem("mathread_vocab_v3",JSON.stringify(vocab));$("vocab").click()})};
+function toast(t){$("toast").textContent=t;$("toast").style.display="block";clearTimeout(window.__toast);window.__toast=setTimeout(()=>$("toast").style.display="none",1800)}
