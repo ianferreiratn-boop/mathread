@@ -352,7 +352,7 @@ function selectedTextHandler(){
   if(!sel || sel.isCollapsed){ clearSelectionUI(); return; }
   if(!nodeInTextLayer(sel.anchorNode) || !nodeInTextLayer(sel.focusNode)) return;
   const text=sel.toString().replace(/\s+/g," ").trim();
-  if(!text || text.length>1500){ clearSelectionUI(); return; }
+  if(!text){ clearSelectionUI(); return; }
   currentSelectionText=text;
   currentSelectionRange=sel.getRangeAt(0).cloneRange();
   currentSelectionContext=getSelectedContext(text);
